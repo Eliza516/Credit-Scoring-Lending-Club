@@ -1,153 +1,335 @@
-\section{DATA AND METHODOLOGY}
-\label{ch:method}
+\newpage
+\section*{CHƯƠNG 3. PHƯƠNG PHÁP NGHIÊN CỨU  }
+\addcontentsline{toc}{section}{\numberline{}CHƯƠNG 3. PHƯƠNG PHÁP NGHIÊN CỨU}
+\label{chap:focalloss}
 
-This chapter describes the dataset, the definition of the label and the population, the out-of-time split, the leakage controls, the preprocessing pipeline, the models and tuning protocol, and the evaluation protocol. Each rule stated here is checked by a code cell whose printed output is reported in Chapter~\ref{ch:results}.
 
-\subsection{Dataset and data dictionary}
-\label{sec:data}
+\setcounter{section}{3}
+\setcounter{subsection}{0}
+\setcounter{figure}{0}
+\setcounter{table}{0}
 
-The raw file is \code{accepted\_2007\_to\_2018Q4.csv.gz} from the Kaggle dataset \texttt{wordsforthewise/lending-club} \cite{kaggle_lc}. It contains 2,260,701 rows and 151 columns (3.29~GB in memory after loading). Because the columns are numerous and cryptically named, notebook~1 builds a data dictionary in which every column has (i) a one-line meaning, (ii) a group and (iii) a \emph{hypothesis} about whether it is known at application time: \code{Yes}, \code{No} or \code{Uncertain}. Code cells assert that the dictionary covers every raw column exactly once (no missing, extra or duplicate names). The eight groups are listed in Table~\ref{tab:dict}.
+\subsection{Kiến trúc tổng thể của mô hình MaRENet}
 
-\begin{table}[H]
-\centering
-\caption{Number of columns in each group of the data dictionary (printed by notebook~1).}
-\label{tab:dict}
-\begin{tabular}{lr}
-\toprule
-\textbf{Group} & \textbf{Columns} \\
-\midrule
-Loan information & 21 \\
-Borrower information & 8 \\
-Credit history, part 1 & 38 \\
-Credit history, part 2 & 31 \\
-Joint application & 16 \\
-Post-loan payments & 15 \\
-Hardship plan & 15 \\
-Debt settlement & 7 \\
-\midrule
-\textbf{Total} & \textbf{151} \\
-\bottomrule
-\end{tabular}
-\end{table}
+\subsubsection{Mục tiêu thiết kế MaRENet}
 
-The \code{Yes}/\code{No}/\code{Uncertain} labels are \emph{hypotheses from column descriptions}, not facts; Section~\ref{sec:leakage} lists how they are verified with data.
+Trong bối cảnh các hành vi gian lận tài chính ngày càng trở nên phức tạp, tinh vi và khó phát hiện theo các mẫu truyền thống, việc xây dựng một mô hình có khả năng nhận diện các tín hiệu bất thường ẩn sâu trong chuỗi hành vi người dùng trở thành yêu cầu cấp thiết. Mô hình MaRENet được thiết kế nhằm đáp ứng yêu cầu này thông qua một kiến trúc kết hợp giữa học chuỗi thời gian, lựa chọn đặc trưng động và mở rộng bối cảnh hành vi.
 
-\subsection{Label and population}
-\label{sec:filters}
+Khác với các phương pháp phân loại tĩnh, MaRENet hướng đến mục tiêu học sâu các mối quan hệ tuần tự giữa các giao dịch liên tiếp, từ đó nhận diện các thay đổi vi mô trong hành vi người dùng – vốn là những dấu hiệu quan trọng để phân biệt giao dịch hợp lệ và gian lận. Đồng thời, mô hình tích hợp cơ chế tập trung vào các đặc trưng đầu vào quan trọng nhất, giúp tăng khả năng giải thích (interpretability) và giảm thiểu sự phụ thuộc vào nhiễu thông tin không cần thiết.
 
-\paragraph{Label.} Of the nine \code{loan\_status} values, only two are final outcomes that we use: \code{Fully Paid} $\to y=0$ and \code{Charged Off} $\to y=1$. To avoid relying only on the names of the statuses we check which statuses have no outstanding principal (\code{out\_prncp}$=0$ for all loans of that status): \code{Charged Off}, \code{Fully Paid} and the two ``Does not meet the credit policy'' statuses are finished; \code{Current}, \code{In Grace Period}, \code{Late} and \code{Default} are not. The two ``credit policy'' statuses (2,749 loans, 0.12\% of the file) belong to an older lending policy and are excluded to keep the product homogeneous. 33 rows have no status (and no issue date) and are also dropped.
+Bên cạnh đó, MaRENet được thiết kế với mục tiêu hoạt động hiệu quả ngay cả trong điều kiện dữ liệu lệch lớp nghiêm trọng – một đặc trưng phổ biến trong các hệ thống tài chính thực tế. Sự kết hợp giữa học chuỗi, lựa chọn đặc trưng và cơ chế mất mát thích ứng sẽ giúp mô hình không chỉ học hiệu quả từ các giao dịch thông thường, mà còn nhạy bén hơn với các tín hiệu gian lận hiếm gặp nhưng có giá trị cảnh báo cao.
 
-\paragraph{Population filters.} Four filters are applied in sequence, each justified by code:
-\begin{enumerate}
-    \item \textbf{Labelled}: status is \code{Fully Paid} or \code{Charged Off}.
-    \item \textbf{Issued from 2012} (\code{START\_YEAR}=2012): loans before 2012 are only 2.96\% of the labelled loans, and 44 numeric columns have no data before 2012 (Section~\ref{sec:res-data}).
-    \item \textbf{Matured}: with $m(\cdot)$ = year$\times 12$ + month, a loan is matured if $m(\text{issue})+\text{term}\le m(\text{snapshot})$, where the snapshot is the latest issue month in the file (2018-12). A matured loan has had the whole contractual term to reach a final outcome. This rule is verified: 99.6\% of matured loans have a final label versus 42.4\% of the others.
-    \item \textbf{36-month term}: with the matured rule, 60-month loans can only appear for issue months up to 2013-12, so the 2015 validation and test periods would contain none; keeping them would change the term mix between train and test. Restricting to 36-month loans makes the term constant across all periods.
-\end{enumerate}
+Tóm lại, mục tiêu thiết kế của MaRENet không chỉ dừng lại ở việc cải thiện độ chính xác trong phát hiện gian lận, mà còn hướng đến một hệ thống thông minh, có khả năng học linh hoạt từ ngữ cảnh và đặc trưng dữ liệu, đồng thời cung cấp khả năng giải thích rõ ràng nhằm hỗ trợ các chuyên gia tài chính trong việc ra quyết định.
 
-\subsection{Out-of-time split}
-\label{sec:split}
+\subsubsection{Cấu trúc ba khối chức năng chính}
 
-The filtered loans are sorted by (\code{issue\_date}, \code{id}). Two cut \emph{dates} are the issue dates found at positions $\lfloor 0.70\,n\rfloor$ and $\lfloor 0.85\,n\rfloor$ of the sorted data; train is every loan issued before the first date, validation every loan between the dates, test every loan on or after the second date. Cutting at whole dates (not at row positions) guarantees that no issue month is shared between sets, so the realised proportions are not exactly 70/15/15. Code asserts that $\max t_{\text{train}}<\min t_{\text{val}}$, $\max t_{\text{val}}<\min t_{\text{test}}$ and that no row is lost or duplicated. A \code{split\_manifest.json} stores the cut dates, row counts and an MD5 hash of the sorted training ids so that other groups can check that they use the same split.
+Kiến trúc của MaRENet được tổ chức thành ba khối chức năng chính, mỗi khối đảm nhận một vai trò cụ thể trong quá trình tiền xử lý, học đặc trưng và mô hình hóa chuỗi giao dịch. Việc phân tách mô hình thành các thành phần độc lập giúp tối ưu hóa khả năng học hành vi, tăng cường tính mô-đun, và hỗ trợ dễ dàng mở rộng hoặc điều chỉnh trong các ứng dụng thực tiễn.
 
-\subsection{Leakage controls}
-\label{sec:leakage}
-
-Four rules protect against leakage.
-\begin{enumerate}
-    \item \textbf{Application-time whitelist.} Only columns whose dictionary hypothesis is \code{Yes} may become features. Columns marked \code{No} (e.g.\ payments, recoveries, last FICO pull, hardship, settlement) and \code{Uncertain} (e.g.\ \code{funded\_amnt}, \code{initial\_list\_status}) are excluded. For \code{funded\_amnt}, the data show it equals the requested \code{loan\_amnt} in 100\% of training loans, so excluding it loses nothing.
-    \item \textbf{Empirical check.} For every suspect column and every whitelisted column we compute a single-column ROC-AUC on the training set. For numeric columns missing values are filled with the median; for text columns with at most 100 distinct values each value is replaced by its in-sample default rate (a diagnostic only, never a feature); other text columns are reduced to a ``has a value'' indicator; the reported AUC is $\max(\mathrm{AUC},1-\mathrm{AUC})$. If post-origination columns are far stronger than any application-time column, this is evidence that they carry outcome information.
-    \item \textbf{Split before fitting.} Everything that learns a number from data---medians, means, standard deviations, one-hot category lists and the caps \code{REVOL\_UTIL\_CAP}, \code{LOAN\_TO\_INCOME\_CAP}, thresholds such as \code{MAX\_MISSING}---is computed on the training set only.
-    \item \textbf{EDA on training only.} All exploratory statistics that relate features to the label use the training set; the single exception is the time-structure analysis of notebook~1, which uses all labelled loans but asks only about counts, maturity and term mix, not about feature--label relations.
-\end{enumerate}
-
-\subsection{Cleaning rules}
-\label{sec:clean}
-
-Cleaning rules are fixed row-wise formulas, so they cannot leak information between sets. They are chosen from the meaning of the columns, and the thresholds that need data are computed on the training set.
 \begin{itemize}
-    \item \code{annual\_inc}$\le 0$ or \code{loan\_amnt}$\le 0$ $\to$ missing.
-    \item \code{dti}$<0$ or $>100$ $\to$ missing (\code{DTI\_MAX}=100; it is a percentage).
-    \item \code{revol\_util} is capped above at its 99.9th training percentile, 102.4 (values above 100 are possible because a card can exceed its limit, so they are not removed).
-    \item \code{fico\_range\_low}$>$\code{fico\_range\_high} $\to$ both missing.
-    \item \code{earliest\_cr\_line} later than the issue date $\to$ missing (to avoid negative credit history).
-    \item duplicate \code{id} rows are dropped (none are found).
+    \item \textbf{Khối mở rộng chuỗi giao dịch (Transactional Expansion Block):} thay vì xử lý từng giao dịch một cách riêng lẻ, khối này thực hiện việc mở rộng mỗi giao dịch đầu vào thành một chuỗi lịch sử giao dịch gần nhất của người dùng. Điều này cho phép mô hình tiếp cận thông tin ngữ cảnh thời gian và hành vi liên tiếp, vốn là yếu tố quan trọng để phát hiện các mẫu gian lận có tính liên kết.
+
+    \item \textbf{Lớp chọn lọc đặc trưng (Feature-wise Masking Layer):} nhằm tăng khả năng tập trung vào các chiều đặc trưng quan trọng, mô hình sử dụng một cơ chế mask học được để gán trọng số mềm cho từng đặc trưng đầu vào. Lớp này đóng vai trò như một cơ chế chú ý nhẹ, giúp loại bỏ nhiễu và làm nổi bật các yếu tố mang tính quyết định trong chuỗi giao dịch.
+
+    \item \textbf{Mạng học chuỗi hành vi (Recurrent Block – GRU/LSTM):} đầu ra từ lớp mask được đưa vào một mạng hồi tiếp (GRU hoặc LSTM) để học biểu diễn ẩn cho toàn bộ chuỗi. Nhờ khả năng lưu giữ trạng thái và phát hiện phụ thuộc thời gian, khối này có thể phát hiện các biến đổi nhỏ nhưng bất thường trong hành vi người dùng theo thời gian.
 \end{itemize}
 
-\subsection{Column grouping and feature selection}
-\label{sec:selection}
+Ba khối chức năng này không hoạt động độc lập mà được tích hợp mượt mà trong kiến trúc tổng thể, tạo thành một hệ thống phát hiện gian lận có khả năng học sâu hành vi, tự động lựa chọn đặc trưng quan trọng, và thích ứng với dữ liệu thực tế phức tạp. Sự phối hợp giữa chúng chính là chìa khóa giúp MaRENet đạt được hiệu suất cao trong các bài toán phân loại giao dịch gian lận ngắn hạn và hiếm gặp.
 
-All 151 columns are assigned to exactly one rule group, in this priority order: (1) label/auxiliary; (2) identifier (at least 99\% distinct values and under 50\% missing); (3) completely empty in train; (4) post-origination or uncertain timing; (5) joint-application; (6) text with more than 100 distinct values (not dates); (7) (quasi-)constant, i.e.\ one value in at least 99\% of rows; (8) more than 30\% missing in train (\code{MAX\_MISSING}=0.30); (9) otherwise a \emph{candidate}. The numeric candidates are then pruned for collinearity: for each pair with $|r|\ge0.90$ in training data, the column with the lower single-column AUC is dropped. Finally, two choices are made on substantive grounds and justified in Chapter~\ref{ch:results}: \code{grade} is dropped because \code{sub\_grade} contains it, and \code{int\_rate} is dropped because Lending Club sets it by grade, so it duplicates the incumbent.
+\subsubsection{Sơ đồ kiến trúc tổng thể}
 
-\subsection{Feature engineering}
-\label{sec:fe}
+Kiến trúc tổng thể của mô hình MaRENet được minh họa trong Hình~\ref{fig:marenet-arch}. Sơ đồ thể hiện rõ quá trình xử lý từ dữ liệu giao dịch thô đến đầu ra đánh giá cuối cùng, thông qua một chuỗi các khối chức năng liên kết chặt chẽ.
 
-Six features are created by fixed formulas (functions \code{make\_*} in notebook~2):
-\begin{align*}
-\text{emp\_length\_years}&=\text{years in \code{emp\_length}} \;(\text{``<1 year''}\to 0,\ \text{``10+ years''}\to 10),\\
-\text{fico\_avg}&=\tfrac12(\text{fico\_range\_low}+\text{fico\_range\_high}),\\
-\text{credit\_history\_years}&=(\text{issue\_date}-\text{earliest\_cr\_line})/365.25,\\
-\text{loan\_to\_income}&=\min(\text{loan\_amnt}/\text{annual\_inc},\,0.5),\\
-\text{log\_annual\_inc}&=\ln(1+\text{annual\_inc}),\qquad \text{log\_revol\_bal}=\ln(1+\text{revol\_bal}).
-\end{align*}
-The cap 0.5 is the 99.9th percentile of the training ratio. The raw columns \code{fico\_range\_low/high}, \code{annual\_inc}, \code{revol\_bal}, \code{emp\_length} and \code{earliest\_cr\_line} are replaced by their derived versions.
+Quá trình bắt đầu từ \textbf{tập dữ liệu giao dịch ban đầu}, dưới dạng bảng gồm nhiều trường thông tin như thời gian giao dịch (\texttt{trans\_time}), mã người dùng (\texttt{id\_user}), đơn vị chấp nhận thanh toán (\texttt{merchant}), số tiền (\texttt{amt}), và các đặc trưng định danh khác. Dữ liệu này được nhóm theo từng người dùng để đảm bảo tính liên tục trong chuỗi hành vi.
 
-\subsection{Preprocessing pipeline}
-\label{sec:pipeline}
+Tiếp theo, mỗi giao dịch được đưa vào khối \textbf{mở rộng giao dịch theo chiều thời gian (Expand Transaction)}, nơi nó được chuyển thành một chuỗi cố định gồm \(d\) giao dịch gần nhất. Quá trình này giúp cung cấp ngữ cảnh lịch sử hành vi cho mỗi giao dịch, thay vì chỉ xử lý từng giao dịch một cách biệt lập.
 
-The whole preprocessing is one scikit-learn \code{Pipeline}:
-\begin{enumerate}
-    \item \code{FunctionTransformer(fix\_invalid\_values)} (cleaning rules);
-    \item \code{FunctionTransformer(add\_features)} (feature engineering);
-    \item \code{ColumnTransformer}: numeric columns $\to$ \code{SimpleImputer(strategy="median")} $\to$ \code{StandardScaler}; categorical columns $\to$ \code{OneHotEncoder(handle\_unknown="ignore")}.
-\end{enumerate}
-The pipeline is \code{fit} on the training set only; validation and test are only \code{transform}ed. The input has 58 raw columns; the output has 153 columns (45 numeric + 108 dummies = 35 \code{sub\_grade} + 6 \code{home\_ownership} + 3 \code{verification\_status} + 14 \code{purpose} + 50 \code{addr\_state}). Median imputation and standardisation are chosen after checking the data (Section~\ref{sec:res-prep}): most columns with missing values are right-skewed, so the mean is pulled away from a typical borrower, and the raw scales differ by more than five orders of magnitude, which matters for the L2 penalty of Equation~\eqref{eq:lr}.
+Sau đó, chuỗi giao dịch được chuẩn hóa và đi qua khối \textbf{Feature Attention theo chiều kênh (Channel-wise Feature Attention)}. Tại đây, cơ chế mặt nạ học được (learnable mask) sẽ điều chỉnh trọng số của từng đặc trưng đầu vào. Các đặc trưng mang nhiều thông tin sẽ được khuếch đại, trong khi những đặc trưng ít liên quan hoặc nhiễu sẽ bị giảm nhẹ. Cơ chế này đóng vai trò như một lớp “chú ý nhẹ” giúp tăng cường khả năng biểu diễn và diễn giải.
 
-\subsection{Models and tuning protocol}
-\label{sec:models}
+Đặc biệt, hai đặc trưng thời gian quan trọng là \texttt{trans\_hour} và \texttt{day\_of\_week} còn được đưa qua một bước \textbf{Temporal Feature Scaling}, với các hệ số huấn luyện được để mô hình tự học mức độ quan trọng tương đối của các yếu tố thời gian trong quá trình phát hiện gian lận.
 
-Five models share the same 153-column input (the baseline uses only \code{sub\_grade}). All hyperparameters are selected by \code{GridSearchCV} with \code{TimeSeriesSplit(n\_splits=3)} and ROC-AUC scoring \emph{inside the training set}; the validation set is not used to tune. Table~\ref{tab:grids} lists the grids. Random seed is 42 everywhere.
+Kết quả từ lớp attention được chuyển tiếp vào một \textbf{mạng hồi tiếp (GRU hoặc LSTM)} để học biểu diễn hành vi tổng thể theo thời gian. Các kiến trúc RNN này có khả năng ghi nhớ trạng thái và phát hiện các mẫu bất thường trong chuỗi hành vi, như sự thay đổi đột ngột trong số tiền, tần suất giao dịch, hoặc loại hình tiêu dùng.
 
-\begin{table}[H]
+Cuối cùng, đầu ra từ RNN được đưa vào tầng đánh giá (Evaluate), để đưa ra phân loại nhị phân: giao dịch có khả năng gian lận hoặc không.
+\begin{figure}[H]
 \centering
-\caption{Models and hyperparameter grids searched with \code{TimeSeriesSplit(3)} inside the training set.}
-\label{tab:grids}
-\small
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{3.4cm}|}
-\hline
-\textbf{Model} & \textbf{Grid (fixed settings in italics)} & \textbf{Combinations} \\
-\hline
-Baseline \code{sub\_grade} & none; default rate per sub-grade in train & 0 \\
-\hline
-Logistic regression (L2) & $C\in\{0.001,0.01,0.1,1,10\}$; \textit{lbfgs, max\_iter=1000} & 5 \\
-\hline
-Decision tree & \code{max\_depth}$\in\{3,\dots,10\}$; \textit{min\_samples\_leaf=50} & 8 \\
-\hline
-Random forest & \code{n\_estimators}$\in\{50,100,150\}$, \code{max\_depth}$\in\{6,8,10\}$, \code{min\_samples\_leaf}$\in\{30,50,60\}$ & 27 \\
-\hline
-HistGradientBoosting & \code{max\_iter}$\in\{50,100,150\}$, \code{max\_depth}$\in\{4,6,8,10\}$, \code{learning\_rate}$\in\{0.05,0.1,0.15,0.2\}$; \textit{min\_samples\_leaf=50} & 48 \\
-\hline
-\end{tabularx}
-\end{table}
+\includegraphics[width=0.95\textwidth]{Images/OverviewDiagramNew.png}
+\caption{Kiến trúc tổng thể của mô hình MaRENet}
+\label{fig:marenet-arch}
+\end{figure}
 
-\subsection{Evaluation protocol}
-\label{sec:eval}
+\subsection{Quy trình tiền xử lý và mở rộng dữ liệu giao dịch}
 
-For each model we compute ROC-AUC on train and validation, Gini and KS on validation, and the gap $\mathrm{AUC}_{\text{train}}-\mathrm{AUC}_{\text{val}}$. Paired-bootstrap intervals ($B=1{,}000$ resamples of the validation loans, seed 42) are computed for each model's AUC minus the baseline's, and for HistGB minus logistic regression. The test set is evaluated one time at the end for the baseline, logistic regression and HistGB; the test set is not used for tuning or model selection. Conclusions are written by code from the computed variables (f-strings) in the notebook, so that wording cannot drift from the numbers.
+\subsubsection{Chuẩn hóa và mã hóa đặc trưng}
 
-\subsection{Follow-up experiments}
-\label{sec:exp}
+Dữ liệu giao dịch thẻ tín dụng trong thực tế thường tồn tại dưới dạng bảng, bao gồm nhiều đặc trưng rời rạc (categorical) và liên tục (numerical), phản ánh các khía cạnh khác nhau của hành vi giao dịch người dùng — như thời điểm thực hiện, số tiền, vị trí, nghề nghiệp, giới tính, loại giao dịch, v.v. Để đảm bảo dữ liệu đầu vào phù hợp với kiến trúc học sâu của mô hình MaRENet, đặc biệt là trong bối cảnh học biểu diễn theo chuỗi, quá trình tiền xử lý bao gồm hai bước quan trọng: \textbf{mã hóa đặc trưng} và \textbf{chuẩn hóa giá trị đầu vào}.
 
-Both experiments are in separate notebooks under \code{experiences/} and reuse the matrices of notebook~2. They do not change the main results.
+\paragraph{Xử lý đặc trưng thời gian.}
+\mbox{}\\
+Đặc trưng \texttt{trans\_date\_trans\_time} được chuyển đổi từ định dạng chuỗi về dạng số thông qua hàm \texttt{timestamp}. 
+Sau đó, hai đặc trưng phụ là \texttt{day\_of\_week} (thứ trong tuần) và \texttt{trans\_hour} (giờ trong ngày) được trích xuất để phục vụ cho việc phân tích hành vi theo nhịp sinh học người dùng. 
+Đây là hai đặc trưng có ý nghĩa đặc biệt trong phát hiện gian lận, bởi vì các hành vi bất thường thường xảy ra vào thời điểm ngoài giờ hành chính hoặc vào cuối tuần.
 
-\paragraph{Experiment 1: removing \code{sub\_grade}.} Remove the 35 \code{sub\_grade} dummies (118 columns remain), refit logistic regression with $C=1$ (not re-tuned), compare with the full model and the baseline on validation and test, bootstrap the AUC differences on validation, and tabulate how the coefficients of eight key numeric features change.
 
-\paragraph{Experiment 2: compact scorecard.} Use 10 numeric fields (\code{fico\_avg}, \code{dti}, \code{log\_annual\_inc}, \code{loan\_to\_income}, \code{revol\_util}, \code{inq\_last\_6mths}, \code{acc\_open\_past\_24mths}, \code{total\_bal\_ex\_mort}, \code{delinq\_2yrs}, \code{loan\_amnt}) and 2 categorical fields (\code{home\_ownership}, \code{purpose}), i.e.\ 30 columns after encoding, refit logistic regression with $C=1$, convert probabilities to points with Equation~\eqref{eq:score} ($\mathrm{PDO}=20$, 600 points at default odds 1/5) and group scores into four bands whose cut-offs (590, 615, 640) were set by looking at the validation score distribution; the bands are then applied unchanged to the test set. The test set is used here for descriptive reporting, not for choosing among models; this is stated in the notebook.
+\paragraph{Tính toán và phân nhóm độ tuổi.}
+\mbox{}\\
+Đặc trưng ngày sinh \texttt{dob} của người dùng được chuyển đổi thành giá trị tuổi thực, sau đó phân chia thành các nhóm tuổi rời rạc như \textit{20–30}, \textit{30–40}, \textit{40–50}, v.v. Các nhóm này tiếp tục được mã hóa bằng kỹ thuật \textbf{mean encoding}, tức là ánh xạ mỗi nhóm tuổi thành một giá trị số đại diện cho xác suất xảy ra hành vi gian lận trong nhóm đó. Phương pháp này giúp mô hình học được các xu hướng rủi ro theo độ tuổi mà vẫn giữ được tính liên tục trong không gian đặc trưng.
 
-\subsection{Implementation and reproducibility}
+\paragraph{Mã hóa nghề nghiệp và danh mục giao dịch.}
+\mbox{}\\
+Các đặc trưng như \texttt{job} (nghề nghiệp) và \texttt{category} (loại giao dịch) được mã hóa bằng kỹ thuật tương tự: sắp xếp các nhóm theo tỷ lệ gian lận trung bình và ánh xạ thành giá trị số tăng dần. Cách tiếp cận này không chỉ giúp biểu diễn dạng rời rạc mà còn truyền tải thông tin thứ bậc ngầm định về mức độ rủi ro, tăng cường khả năng học phi tuyến của mô hình.
 
-All code lives in three main notebooks (\code{01\_data\_split}, \code{02\_features}, \code{03\_models}) and two experiment notebooks; there is no separate \code{.py} module, and functions are defined near their first use. Libraries are pandas, NumPy, scikit-learn \cite{pedregosa2011}, Matplotlib, pyarrow and joblib (Python $\ge$ 3.10). Notebooks are committed with their outputs and must be run from top to bottom. The raw file is git-ignored and required; no synthetic data are used. Intermediate artefacts (split parquet files, the fitted pipeline, feature lists, the split manifest) are written to \code{data/processed} and \code{artifacts}, both git-ignored.
+\paragraph{Mã hóa vị trí địa lý và định danh.} 
+\mbox{}\\
+Các đặc trưng như \texttt{merchant}, \texttt{street}, \texttt{city}, \texttt{zip}, \texttt{state} mang tính phân loại với miền giá trị rất lớn. Do đó, kỹ thuật \texttt{factorize} (gán chỉ số nguyên liên tiếp) được áp dụng để tránh bùng nổ chiều nếu dùng one-hot. Đặc trưng \texttt{gender} có giá trị nhị phân (nam/nữ) được mã hóa bằng \texttt{one-hot encoding} và loại bỏ một chiều dư thừa để tránh đa cộng tuyến trong dữ liệu đầu vào.
 
-\subsection{Chapter summary}
+\paragraph{Tách tập huấn luyện và kiểm tra theo người dùng.} 
+\mbox{}\\
+Một nguyên tắc quan trọng trong phát hiện gian lận là đảm bảo không có giao dịch nào của cùng một người dùng xuất hiện đồng thời ở cả tập huấn luyện và kiểm tra. Vì vậy, việc chia dữ liệu được thực hiện dựa trên mã số thẻ \texttt{cc\_num} — mỗi người dùng chỉ xuất hiện ở một trong hai tập. Điều này giúp đánh giá khả năng khái quát hóa (generalization) của mô hình trong bối cảnh thực tế, nơi hệ thống phải xử lý các người dùng chưa từng thấy trước đó.
 
-The method restricts the data to labelled, matured, 36-month loans from 2012, splits them chronologically, admits only application-time columns (verified by single-column AUC), fits all learned preprocessing on the training set inside one pipeline, tunes five models with time-ordered cross-validation, and evaluates with AUC, Gini, KS, paired-bootstrap intervals and one final test evaluation. Chapter~\ref{ch:results} reports what the code printed.
+\paragraph{Chuẩn hóa toàn bộ đặc trưng.} 
+\mbox{}\\
+Sau khi mã hóa, toàn bộ đặc trưng được chuẩn hóa về cùng một miền giá trị (có trung bình bằng 0 và độ lệch chuẩn bằng 1) bằng công cụ \texttt{StandardScaler}. Bước chuẩn hóa này là cần thiết để đảm bảo các đặc trưng không chi phối lẫn nhau do khác biệt về đơn vị đo lường, đồng thời giúp tăng tốc độ hội tụ của quá trình huấn luyện và làm cho việc tối ưu hóa mạng học sâu hiệu quả hơn.
+
+Tóm lại, quy trình mã hóa và chuẩn hóa đặc trưng đóng vai trò then chốt trong việc chuẩn bị dữ liệu đầu vào phù hợp với kiến trúc MaRENet. Nó không chỉ giúp cải thiện chất lượng dữ liệu mà còn hỗ trợ mô hình học tốt hơn các mối quan hệ ngầm giữa đặc trưng và nhãn phân loại, từ đó tăng cường hiệu quả phát hiện gian lận trong hệ thống giao dịch tài chính.
+
+\subsubsection{Gán nhãn và xử lý thiếu dữ liệu}
+
+Sau khi hoàn tất các bước mã hóa và chuẩn hóa đặc trưng, một khâu quan trọng trong quy trình tiền xử lý là xây dựng biến mục tiêu (\textit{target variable}) cho bài toán học có giám sát, đồng thời kiểm tra và xử lý khả năng tồn tại của các giá trị thiếu trong dữ liệu đầu vào nhằm đảm bảo chất lượng và độ tin cậy của mô hình.
+
+\paragraph{Gán nhãn.}
+\mbox{}\\
+Tập dữ liệu được gán nhãn dựa trên đặc trưng \texttt{is\_fraud} – một biến nhị phân phản ánh tính hợp lệ của mỗi giao dịch. Cụ thể, giá trị \texttt{1} đại diện cho giao dịch bị xác định là gian lận, trong khi giá trị \texttt{0} tương ứng với giao dịch hợp lệ. Đặc trưng này được trích xuất và tách riêng làm biến mục tiêu chính thức trong toàn bộ quá trình huấn luyện và đánh giá.
+
+Sau khi gán nhãn, dữ liệu được chia thành hai tập riêng biệt: tập huấn luyện và tập kiểm tra. Khác với cách chia ngẫu nhiên theo tỷ lệ mẫu, quy trình này sử dụng đặc trưng \texttt{cc\_num} – đại diện cho mỗi người dùng – để chia tách theo đơn vị khách hàng. Điều này đảm bảo rằng không có sự trùng lặp giao dịch giữa hai tập, từ đó mô phỏng đúng điều kiện thực tế khi hệ thống cần phát hiện gian lận trên các tài khoản mới hoàn toàn chưa từng thấy trong giai đoạn huấn luyện. Cách chia tách này đóng vai trò quan trọng trong việc đánh giá năng lực khái quát hóa (\textit{generalization}) thực sự của mô hình, thay vì chỉ phản ánh khả năng ghi nhớ các mẫu cũ.
+
+\paragraph{Xử lý thiếu dữ liệu.}
+\mbox{}\\
+Một bước không thể thiếu trong quy trình tiền xử lý dữ liệu là kiểm tra sự tồn tại của các giá trị bị thiếu (NaN), vốn có thể ảnh hưởng tiêu cực đến độ chính xác và tính ổn định của mô hình học máy. Trong thực hành tiêu chuẩn, các thao tác như \texttt{df.isnull().sum()} hoặc trực quan hóa dữ liệu thiếu bằng bản đồ nhiệt sẽ được sử dụng để phát hiện và đánh giá mức độ thiếu hụt của từng đặc trưng.
+
+Tuy nhiên, theo kết quả kiểm định sơ bộ và đánh giá thực nghiệm từ tập dữ liệu nghiên cứu, không phát hiện sự hiện diện đáng kể của các giá trị thiếu. Điều này loại bỏ nhu cầu áp dụng các chiến lược điền khuyết phổ biến như \texttt{mean imputation}, \texttt{mode imputation}, \texttt{forward fill} hoặc \texttt{backward fill}.
+
+Dù vậy, trong các hệ thống thực tế – nơi dữ liệu có thể bị thiếu do lỗi thu thập, hệ thống phân tán hoặc nhập liệu không đồng nhất – việc phát hiện và xử lý thiếu dữ liệu vẫn được coi là một bước bắt buộc để đảm bảo tính toàn vẹn (\textit{data integrity}), độ tin cậy và khả năng khái quát hóa của mô hình trong các tình huống triển khai thực tế.
+
+\subsubsection{Kỹ thuật mở rộng giao dịch (Transactional Expansion)}
+\label{subsec:tx_expansion}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{Images/Transactional Expansion.png}
+    \caption{Minh họa kỹ thuật mở rộng giao dịch: mỗi giao dịch hiện tại được ghép với \( d-1 \) giao dịch trước đó để hình thành chuỗi có ngữ cảnh hành vi người dùng.}
+    \label{fig:transactional_expansion}
+\end{figure}
+
+Trong thực tế, đánh giá một giao dịch đơn lẻ hiếm khi phản ánh đầy đủ hành vi của
+người dùng; tín hiệu gian lận chỉ thực sự nổi bật khi giao dịch đó được đặt cạnh lịch
+sử hoạt động gần kề. Để bổ sung bối cảnh thời gian một cách có hệ thống, luận văn
+kế thừa chiến lược \emph{transactional expansion} được đề xuất bởi
+\cite{Xie2022}: mỗi giao dịch hiện tại được ghép với $d-1$ giao dịch liền trước tạo
+thành một cửa sổ cố định độ dài $d$.
+
+\paragraph{Định nghĩa chuỗi cá nhân}
+\mbox{}\\
+Giả sử $u \in \mathcal{U}$ là một khách hàng với dãy giao dịch
+\[
+\mathbf{D}_u=\{\mathbf{x}_1^u,\mathbf{x}_2^u,\dots,\mathbf{x}_{n_u}^u\},\quad
+\mathbf{x}_i^u\in\mathbb{R}^m,
+\]
+trong đó \( \mathbf{x}_i^u = \{ x^u_{i_1}, x^u_{i_2}, \dots, x^u_{i_m} \} \) là vector đặc trưng của giao dịch thứ \( i \), bao gồm \( m \) là số chiều đặc trưng (gồm các thuộc tính như số tiền, thời gian, danh mục giao dịch, độ tuổi, vị trí, v.v.).
+
+\paragraph{Mở rộng giao dịch}
+\mbox{}\\
+Với tham số bộ nhớ $d$, ngữ cảnh mở rộng cho giao dịch thứ~$i$ được biểu diễn
+bởi ma trận
+\[
+\mathbf{C}_i^u=\bigl[\mathbf{x}_{i-d+1}^u,\,
+                      \mathbf{x}_{i-d+2}^u,\,
+                      \dots,\,
+                      \mathbf{x}_{i-1}^u,\,
+                      \mathbf{x}_i^u\bigr]\in\mathbb{R}^{d\times m}.
+\]
+Nếu $i<d$, giao dịch đầu tiên $\mathbf{x}_1^u$ được lặp lại ở đầu chuỗi để bảo
+toàn độ dài.
+
+\paragraph{Ví dụ minh hoạ}
+\mbox{}\\
+Với một người dùng có năm giao dịch
+$\{\mathbf{x}_1,\mathbf{x}_2,\mathbf{x}_3,\mathbf{x}_4,\mathbf{x}_5\}$ và chọn
+$d=3$, ta thu được
+\[
+\begin{aligned}
+\mathbf{C}_1&=[\mathbf{x}_1,\mathbf{x}_1,\mathbf{x}_1],\\
+\mathbf{C}_2&=[\mathbf{x}_1,\mathbf{x}_1,\mathbf{x}_2],\\
+\mathbf{C}_3&=[\mathbf{x}_1,\mathbf{x}_2,\mathbf{x}_3],\\
+\mathbf{C}_4&=[\mathbf{x}_2,\mathbf{x}_3,\mathbf{x}_4],\\
+\mathbf{C}_5&=[\mathbf{x}_3,\mathbf{x}_4,\mathbf{x}_5].
+\end{aligned}
+\]
+
+\paragraph{Chọn độ dài cửa sổ $d$}
+\mbox{}\\
+Độ dài quá lớn dễ khiến hành vi cũ “lấn át” tín hiệu mới; quá nhỏ lại bỏ sót
+quan hệ dài hạn. Theo \cite{Xie2022}, luận văn áp dụng quy tắc kinh nghiệm
+\[
+d=\Bigl\lfloor\frac{n}{|\mathcal{U}|}\Bigr\rfloor,
+\]
+trong đó $n$ là tổng số giao dịch toàn bộ tập và $|\mathcal{U}|$ là số người dùng.
+Cách tính này phản ánh số giao dịch trung bình mỗi khách hàng, giúp cân bằng giữa
+thông tin lâu dài và tính cập nhật của hành vi.
+
+\paragraph{Luồng xử lý tổng quát}
+\mbox{}\\
+Hình~\ref{fig:transactional_expansion} minh hoạ toàn bộ quy trình: đặc trưng thô
+được chuẩn hoá, sắp xếp theo thời gian, mở rộng thành cửa sổ $d$ giao dịch, sau đó
+đi qua các khối \emph{Temporal Feature Scaling} và \emph{Channel-wise Feature
+Attention} trước khi được RNN mã hoá. Nhờ vậy, MaRENet đồng thời nắm bắt
+\emph{chuỗi hành vi ngắn hạn} và \emph{mẫu lặp dài hạn}, nâng cao độ nhạy trong
+phát hiện gian lận.
+
+\subsection{ Cơ chế học biểu diễn đặc trưng với mặt nạ}
+
+Tiếp nối kỹ thuật mở rộng chuỗi giao dịch ở Mục~3.2, mỗi giao dịch hiện tại được biểu diễn trong ngữ cảnh hành vi liền kề bằng một chuỗi tensor có kích thước cố định:
+
+\[
+\mathbf{X}^{0} \in \mathbb{R}^{d \times m},
+\]
+
+trong đó \(d\) là độ dài chuỗi giao dịch (số lượng giao dịch liên tiếp trong một cửa sổ thời gian), còn \(m\) là số lượng đặc trưng mô tả mỗi giao dịch. Mỗi dòng trong \( \mathbf{X}^0 \) đại diện cho một giao dịch với các thuộc tính như số tiền, thời gian, loại cửa hàng, vị trí, độ tuổi, v.v.
+
+Để tăng cường khả năng học biểu diễn và giảm nhiễu từ các đặc trưng không liên quan, mô hình áp dụng cơ chế mặt nạ học được theo từng chiều đặc trưng, gọi là \textbf{mặt nạ theo chiều đặc trưng}. Mặt nạ này là một vector học được \(\mathbf{m} \in \mathbb{R}^m\), đại diện cho trọng số chú ý tương ứng với từng đặc trưng:
+
+\[
+\mathbf{Z}' = \mathbf{X}^0 \odot \left(1 + \tanh(\mathbf{m})\right),
+\]
+
+trong đó ký hiệu \( \odot \) là phép nhân từng phần tử (Hadamard). Hàm biến đổi phi tuyến \( \tanh(\cdot) \) giúp ổn định giá trị đầu ra, còn phép cộng thêm 1 giúp tránh việc triệt tiêu hoàn toàn thông tin đầu vào.
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=0.65\linewidth]{Images/FeatureMask.png}
+    \caption{Cơ chế mặt nạ theo chiều đặc trưng trong mô hình MaRENet.}
+    \label{fig:feature_mask}
+\end{figure}
+
+\textbf{Phân tích toán học.}\\
+Hàm \(\tanh\) giới hạn đầu ra của \(\mathbf{m}\) trong khoảng \((-1, 1)\), do đó \(1 + \tanh(m_j) \in (0, 2)\) đóng vai trò như một hệ số khuếch đại mềm cho từng đặc trưng. Nếu \(m_j\) lớn hơn 0, đặc trưng tương ứng sẽ được khuếch đại; ngược lại, nếu \(m_j\) âm lớn, đặc trưng sẽ bị giảm nhẹ. Điều này cho phép mô hình học được chiều nào nên tăng cường và chiều nào nên giảm bớt vai trò trong quá trình biểu diễn.
+
+Lợi ích lớn của cơ chế này là các trọng số mặt nạ được học trực tiếp thông qua lan truyền ngược, mà không cần thiết lập thủ công hoặc giả định trước.
+
+\textbf{Liên hệ với các kỹ thuật khác.}\\
+Cơ chế mặt nạ trên có thể xem là một dạng chú ý tĩnh, nhẹ hơn nhiều so với các mô hình chú ý động như Transformer~\cite{vaswani2017attention} hay SE-Block~\cite{hu2018squeeze}. Thay vì tính toán trọng số cho từng mẫu, cơ chế này học trọng số toàn cục theo từng chiều đầu vào, do đó phù hợp với dữ liệu bảng (tabular) có nhiều trường rời rạc và chi phí tính toán thấp.
+
+Một số mô hình như TabNet~\cite{arik2019tabnet} hoặc Gated Feature Network~\cite{arik2019tabnet} cũng sử dụng ý tưởng học trọng số đặc trưng, nhưng thường có cấu trúc phức tạp hơn. MaRENet vẫn đạt được hiệu quả chú ý đặc trưng mà không đánh đổi hiệu suất xử lý.
+
+Một điểm nổi bật trong nghiên cứu này là việc tích hợp trực tiếp hai đặc trưng thời gian \texttt{trans\_hour} và \texttt{day\_of\_week} vào cơ chế mặt nạ trọng số. Hai đặc trưng này có mối liên hệ chặt chẽ với hành vi gian lận, như thể hiện trong Hình~\ref{fig:2} và Hình~\ref{fig:3}. Mô hình học hai hệ số vô hướng có thể huấn luyện được:
+
+\[
+w_d \in \mathbb{R}, \quad w_h \in \mathbb{R},
+\]
+
+với giá trị khởi tạo là 1.0 để đảm bảo trung tính ban đầu.
+
+Hai hệ số này được áp dụng trực tiếp lên các chiều đặc trưng tương ứng trong \( \mathbf{X}^0 \):
+
+\[
+\mathbf{X}_{0[t,i]} \;\longleftarrow\;
+\begin{cases}
+  w_d \cdot \mathbf{X}_{0[t,i]}, & \text{nếu } i = \mathrm{idx}_{\text{day}},\\[6pt]
+  w_h \cdot \mathbf{X}_{0[t,i]}, & \text{nếu } i = \mathrm{idx}_{\text{hr}},\\[3pt]
+  \mathbf{X}_{0[t,i]},           & \text{ngược lại}.
+\end{cases}
+\]
+
+Cách tiếp cận này cho phép mô hình học được tầm quan trọng tương đối của thông tin thời gian trong phát hiện gian lận. Nếu các đặc trưng này thực sự phân biệt cao, các trọng số tương ứng sẽ được khuếch đại trong quá trình huấn luyện.
+
+Sau bước điều chỉnh trọng số, tensor đầu vào được chiếu tuyến tính vào không gian đặc trưng mới:
+
+\[
+\mathbf{Y} = \mathrm{Linear}(\mathbf{Z}') \in \mathbb{R}^{d \times m'},
+\]
+
+trong đó \(m'\) là số chiều đầu ra.
+
+\textbf{Lợi ích của kết nối tàn dư.}\\
+Sau bước chiếu và chuẩn hóa, mô hình sử dụng kết nối tàn dư để giữ lại thông tin ban đầu từ \( \mathbf{X}^{0} \). Điều này giúp tránh mất thông tin nếu phép chiếu làm suy yếu đặc trưng gốc, đồng thời hỗ trợ lan truyền gradient tốt hơn, giảm hiện tượng mất mát gradient khi huấn luyện sâu.
+
+Cuối cùng, đầu ra được chuẩn hóa theo lô, kết nối tàn dư với đầu vào ban đầu và áp dụng hàm kích hoạt ReLU:
+
+\[
+\mathbf{X}^{\mathrm{out}} = \mathrm{ReLU}\bigl(\mathrm{Norm}(\mathbf{Y}) + \mathbf{X}^{0}\bigr) \in \mathbb{R}^{d \times m'}.
+\]
+
+Tổng thể, cơ chế này giúp mô hình học được trọng số phù hợp cho từng chiều đặc trưng, làm nổi bật các hành vi bất thường trong chuỗi giao dịch và tăng khả năng phát hiện gian lận.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Images/DayofWeek.png}
+    \caption{Phân bố các giao dịch gian lận theo thứ trong tuần: tần suất cao vào thứ Bảy, Chủ nhật và thứ Hai.}
+    \label{fig:2}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Images/HourofDay.png}
+    \caption{Phân bố các giao dịch gian lận theo giờ trong ngày: tập trung vào ban đêm.}
+    \label{fig:3}
+\end{figure}
+
+
+\subsection{Mạng nơ-ron hồi tiếp cho học hành vi người dùng}
+
+Sau khi áp dụng cơ chế Feature-wise Mask nhằm làm nổi bật các đặc trưng quan trọng trong chuỗi giao dịch, đầu ra được đưa vào một mạng hồi tiếp (Recurrent Neural Network – RNN) để mô hình hóa hành vi người dùng theo thời gian. Việc học hành vi có tính chất tuần tự là đặc biệt cần thiết trong bài toán phát hiện gian lận, bởi vì các dấu hiệu bất thường thường chỉ thể hiện rõ ràng khi được đặt trong bối cảnh các hành vi lịch sử trước đó.
+
+Trong kiến trúc MaRENet, hai biến thể phổ biến của RNN là \textbf{Gated Recurrent Unit (GRU)} và \textbf{Long Short-Term Memory (LSTM)} được sử dụng thay thế linh hoạt tùy thuộc vào yêu cầu huấn luyện. Việc tích hợp các mô hình hồi tiếp giúp hệ thống nắm bắt được các quan hệ phụ thuộc theo thời gian và nhận diện tốt hơn các mẫu hành vi bất thường có tính tích luỹ. Cơ chế hoạt động và vai trò của GRU và LSTM trong học chuỗi đã được phân tích chi tiết tại Phần~\ref{sec:theory}, và sẽ không được lặp lại ở đây.
+
+
+\subsection{Lớp phân loại và dự đoán gian lận}
+
+Sau khi chuỗi giao dịch được xử lý qua mạng hồi tiếp (GRU hoặc LSTM), trạng thái ẩn tại bước thời gian cuối cùng \( \mathbf{h}_t \) được sử dụng như một biểu diễn tổng hợp cho toàn bộ chuỗi hành vi. Vector này đồng thời ghi nhận các mối quan hệ dài hạn (chẳng hạn như xu hướng chi tiêu dần thay đổi theo thời gian) và các bất thường ngắn hạn (ví dụ, các giao dịch đột ngột bất thường).
+
+Để dự đoán xác suất gian lận, biểu diễn \( \mathbf{h}_t \) được đưa vào một tầng phân loại tuyến tính kết hợp với hàm kích hoạt sigmoid. Cụ thể, đầu tiên mô hình tính toán logit:
+
+\begin{equation}
+\ell = \mathbf{w}^\top \mathbf{h}_t + b,
+\end{equation}
+
+trong đó \( \mathbf{w} \in \mathbb{R}^H \) và \( b \in \mathbb{R} \) là các tham số học được của tầng phân loại, với \( H \) là kích thước của trạng thái ẩn.
+
+Sau đó, hàm sigmoid được áp dụng để tạo ra xác suất dự đoán:
+
+\begin{equation}
+\hat{y} = \sigma(\ell) = \frac{1}{1 + e^{-\ell}},
+\end{equation}
+
+trong đó \( \hat{y} \in (0, 1) \) đại diện cho xác suất mà chuỗi giao dịch đầu vào tương ứng với hành vi gian lận. Ngưỡng phân loại (\textit{threshold}) có thể được điều chỉnh trong quá trình đánh giá để tối ưu hóa các chỉ số như Precision, Recall hoặc F1-score tùy theo mục tiêu ứng dụng.
+
+
+\subsection{Chiến lược huấn luyện và tối ưu mô hình}
+
+Trong quá trình huấn luyện mô hình FraudGRU, em sử dụng hàm mất mát kết hợp giữa Binary Cross-Entropy (BCE) và Focal Loss, được điều chỉnh thông qua chiến lược ``Uncertainty Weighting'' như được đề xuất bởi Kendall \& Gal (CVPR 2018)~\cite{Kendall2018}. Mục tiêu của phương pháp này là học tự động mức độ tin cậy (uncertainty) tương ứng cho từng loại hàm mất mát, từ đó giúp mô hình tập trung vào các mẫu khó phân loại hơn, đặc biệt là trong bối cảnh dữ liệu bất cân bằng mạnh như bài toán phát hiện gian lận.
+
+Cụ thể, hàm mất mát được sử dụng có dạng:
+
+\begin{equation}
+\mathcal{L}_{\text{combined}} = \frac{1}{2} \exp(-s_1) \cdot \mathcal{L}_{\text{BCE}} + \frac{1}{2} s_1 + \frac{1}{2} \exp(-s_2) \cdot \mathcal{L}_{\text{Focal}} + \frac{1}{2} s_2
+\end{equation}
+
+Trong đó, \(\mathcal{L}_{\text{BCE}}\) và \(\mathcal{L}_{\text{Focal}}\) lần lượt là hai hàm mất mát Binary Cross-Entropy và Focal Loss đã được trình bày và phân tích chi tiết trong Chương~2. Các tham số \(\alpha = 0.25\), \(\gamma = 2\) được sử dụng cho Focal Loss nhằm xử lý mất cân bằng lớp. Hai đại lượng \(s_1 = \log \sigma_{\text{BCE}}^2\) và \(s_2 = \log \sigma_{\text{Focal}}^2\) là các tham số học được, đóng vai trò điều chỉnh trọng số đóng góp tương đối giữa hai thành phần mất mát trong quá trình tối ưu.
+
+
+\subsection{Kết luận chương 3}
+
+Chương~3 đã trình bày một cách toàn diện quy trình \textit{“từ dữ liệu đến mô hình”} trong hệ thống phát hiện gian lận MaRENet, từ mục tiêu thiết kế cho đến chiến lược huấn luyện cụ thể. Trước hết, chương đã lý giải vì sao việc mở rộng bối cảnh chuỗi (\emph{Transactional Expansion}) là chìa khóa để nắm bắt tín hiệu bất thường ẩn sâu trong lịch sử giao dịch, qua đó khắc phục hạn chế của các phương pháp chỉ xử lý từng giao dịch đơn lẻ. Phần mô tả kiến trúc cũng chỉ ra cách ba khối chức năng—mở rộng chuỗi, mặt nạ đặc trưng và mạng hồi tiếp—được tổ chức theo kiểu \emph{pipeline} mạch lạc, giúp mô hình vừa linh hoạt thích ứng, vừa dễ dàng mở rộng trong các kịch bản thực tế có khối lượng dữ liệu lớn.
+
+Tiếp theo, chương đã hệ thống hoá quy trình tiền xử lý bao quát: từ mã hoá đặc trưng rời rạc, chuẩn hoá giá trị liên tục, đến nguyên tắc chia \textit{train–test} nghiêm ngặt theo người dùng nhằm tránh rò rỉ thông tin. Trong đó, kỹ thuật \emph{mean/factorize encoding} cho các biến phân loại dung hoà giữa tính gọn nhẹ của one–hot và khả năng nắm bắt thứ bậc rủi ro ngầm; còn bước chuẩn hoá toàn cục đảm bảo tốc độ hội tụ và ổn định của mạng học sâu.
+
+Một đóng góp cốt lõi khác là cơ chế \textbf{mặt nạ theo chiều đặc trưng}, hoạt động như một lớp “chú ý tĩnh” giúp MaRENet tự động học trọng số cho từng trường thông tin, đồng thời cho phép điều chỉnh riêng biệt hai đặc trưng thời gian (\texttt{day\_of\_week} và \texttt{trans\_hour})—vốn được thực nghiệm chứng minh là giàu khả năng phân biệt gian lận. Sự kết hợp giữa mặt nạ đặc trưng, kết nối tàn dư và chiếu tuyến tính giúp bảo toàn thông tin gốc, hạn chế mất mát gradient khi mạng đi sâu.
+
+Ở tầng học chuỗi, GRU/LSTM đóng vai trò “bộ nhớ động” ghi nhận cả xu hướng dài hạn lẫn biến động ngắn hạn của hành vi người dùng, nâng cao độ nhạy với các mẫu gian lận hiếm gặp. Cuối cùng, tầng phân loại sigmoid biến trạng thái ẩn thành xác suất gian lận, cho phép điều chỉnh ngưỡng theo mục tiêu vận hành thực tế (ví dụ ưu tiên Recall trong giám sát gian lận trực tuyến).
+
+Về chiến lược tối ưu, hàm mất mát kết hợp \textbf{BCE + Focal Loss} dưới cơ chế \emph{Uncertainty Weighting} đã củng cố khả năng cân bằng giữa lớp thiểu số và đa số, đồng thời tự điều chỉnh trọng số học một cách động mà không cần thủ công tinh chỉnh. Điều này đặc biệt quan trọng trong bối cảnh dữ liệu tài chính \emph{extremely‐imbalanced}, nơi tỷ lệ gian lận thường dưới 1\%.
+
+Tóm lại, Chương~3 đã hoàn thiện bức tranh phương pháp luận cho MaRENet, đặt nền tảng vững chắc về kiến trúc, quy trình xử lý và cơ chế huấn luyện. Những thành phần này tương tác nhịp nhàng để tạo nên một hệ thống không chỉ giàu năng lực mô hình hoá hành vi, mà còn sẵn sàng triển khai trong môi trường thời gian thực. Trong Chương~4 kế tiếp, các quyết định thiết kế này sẽ được kiểm nghiệm thông qua bộ thực nghiệm toàn diện—đánh giá hiệu năng, độ nhạy, tính ổn định và khả năng diễn giải—từ đó xác thực giá trị thực tiễn của MaRENet trong nhiệm vụ phát hiện gian lận thẻ tín dụng.
+
+
+
+

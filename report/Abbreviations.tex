@@ -1,33 +1,94 @@
-\begin{center}{\bfseries\LARGE LIST OF SYMBOLS AND ABBREVIATIONS}\end{center}
-\vspace{0.5em}
-\setlength{\parindent}{0pt}
-\begin{longtable}{p{3.2cm} p{11cm}}
+
+\cleardoublepage
+\newgeometry{left=3.5cm,right=2cm,top=3cm,bottom=3cm}  % lề riêng
+\pagenumbering{roman}
+\thispagestyle{empty}
+
+\begin{center}
+    {\bfseries\LARGE DANH MỤC KÝ HIỆU VÀ CHỮ VIẾT TẮT}
+\end{center}\vspace{1em}
+
+%--- BẢNG TỰ NGẮT TRANG, CĂN ĐÚNG LỀ -----%
+\begingroup
+\setlength\LTleft{0pt}     % longtable bám sát lề trái
+\setlength\LTright{0pt}    % longtable bám sát lề phải
+\small                    % (tuỳ) thu nhỏ chữ cho bảng dài
+
+\begin{longtable}{@{}p{2.5cm} p{6.5cm} p{5.5cm}@{}}  % cột cố định độ rộng
 \toprule
-\textbf{Abbreviation} & \textbf{Meaning} \\
+\textbf{} & \textbf{Tên tiếng Anh đầy đủ} & \textbf{Tên tiếng Việt} \\
+\midrule
+\endfirsthead
+
+\multicolumn{3}{c}{\itshape (Tiếp theo bảng danh mục ký hiệu và chữ viết tắt)}\\
+\textbf{} & \textbf{Tên tiếng Anh đầy đủ} & \textbf{Tên tiếng Việt} \\
 \midrule
 \endhead
-AUC & Area Under the (ROC) Curve \\
-B (bootstrap) & Number of bootstrap resamples ($B=1{,}000$) \\
-CI & Confidence Interval \\
-CV & Cross-Validation \\
-DTI & Debt-To-Income ratio \\
-EDA & Exploratory Data Analysis \\
-FICO & Credit score issued by the Fair Isaac Corporation \\
-FPR & False Positive Rate \\
-Gini & Gini coefficient, $2\,\mathrm{AUC}-1$ \\
-HistGB & Histogram-based Gradient Boosting (\code{HistGradientBoostingClassifier}) \\
-KS & Kolmogorov--Smirnov statistic, $\max(\mathrm{TPR}-\mathrm{FPR})$ \\
-LC & Lending Club \\
-LR & Logistic Regression \\
-OOT & Out-Of-Time (temporal hold-out) \\
-P2P & Peer-to-Peer (lending) \\
-PDO & Points to Double the Odds (scorecard scaling) \\
-RF & Random Forest \\
-ROC & Receiver Operating Characteristic \\
-TPR & True Positive Rate \\
-$y_i$ & Label of loan $i$: $1$ = Charged Off, $0$ = Fully Paid \\
-$\mathbf{x}_i$ & Application-time feature vector of loan $i$ \\
-$p_i$ & Predicted probability (risk score) that loan $i$ defaults \\
-$C$ & Inverse regularisation strength of logistic regression \\
+
+\midrule
+\multicolumn{3}{r}{\itshape Còn tiếp}\\
+\endfoot
 \bottomrule
+\endlastfoot
+
+%------------------- DỮ LIỆU --------------------%
+ĐATN     & Graduation Thesis (Project)              & Đồ án tốt nghiệp \\
+AI       & Artificial Intelligence                  & Trí tuệ nhân tạo \\
+ML       & Machine Learning                         & Học máy \\
+DL       & Deep Learning                            & Học sâu \\
+SOTA     & State-of-the-Art                         & Mức tiên tiến nhất \\[3pt]
+
+\multicolumn{3}{l}{\textbf{– Kiến trúc / mô hình}}\\
+RNN      & Recurrent Neural Network                 & Mạng nơ-ron hồi tiếp \\
+GRU      & Gated Recurrent Unit                     & Đơn vị hồi tiếp có cổng \\
+LSTM     & Long Short-Term Memory                   & Mạng bộ nhớ dài–ngắn hạn \\
+CNN      & Convolutional Neural Network             & Mạng nơ-ron tích chập \\
+GNN      & Graph Neural Network                     & Mạng nơ-ron đồ thị \\
+MaRENet  & Mask-based Recurrent Expansion Transactional Network & Mạng hồi tiếp mở rộng giao dịch dựa trên mặt nạ \\
+
+MLP      & Multi-Layer Perceptron                   & Perceptron nhiều lớp \\[3pt]
+
+\multicolumn{3}{l}{\textbf{– Hàm mất mát / tối ưu}}\\
+BCE      & Binary Cross-Entropy                     & Cross-entropy nhị phân \\
+Focal    & Focal Loss                               & Hàm Focal (tăng trọng số mẫu khó) \\
+UW       & Uncertainty Weighting                    & Cân trọng theo độ bất định \\
+GD       & Gradient Descent                         & Thuật toán hạ dốc \\
+SGD      & Stochastic Gradient Descent              & Hạ dốc ngẫu nhiên \\
+Adam     & Adaptive Moment Estimation               & Thuật toán Adam \\[3pt]
+
+\multicolumn{3}{l}{\textbf{– Đánh giá \& thống kê}}\\
+TP       & True Positive                            & Dự đoán đúng nhãn dương \\
+FP       & False Positive                           & Dự đoán sai nhãn dương \\
+TN       & True Negative                            & Dự đoán đúng nhãn âm \\
+FN       & False Negative                           & Dự đoán sai nhãn âm \\
+TPR      & True Positive Rate                       & Tỉ lệ dương tính đúng (Recall) \\
+FPR      & False Positive Rate                      & Tỉ lệ dương tính giả \\
+F1       & F1-score                                 & Trung bình điều hoà Precision–Recall \\
+AUC-ROC  & Area Under ROC Curve                     & Diện tích dưới đường ROC \\
+AUC-PR   & Area Under Precision–Recall Curve        & Diện tích dưới đường PR \\
+MCC      & Matthews Correlation Coefficient         & Hệ số tương quan Matthews \\
+K-fold CV& K-fold Cross-Validation                  & Kiểm định chéo K phần \\[3pt]
+
+\multicolumn{3}{l}{\textbf{– Dữ liệu \& hệ thống}}\\
+TE       & Transactional Expansion                  & Mở rộng ngữ cảnh giao dịch \\
+CNP      & Card-Not-Present                         & Giao dịch không hiện diện thẻ \\
+CP       & Card-Present                             & Giao dịch hiện diện thẻ \\
+CSV      & Comma-Separated Values                   & Định dạng CSV \\
+JSON     & JavaScript Object Notation               & Định dạng JSON \\
+GPU      & Graphics Processing Unit                 & Bộ xử lý đồ họa \\
+API      & Application Programming Interface        & Giao diện lập trình ứng dụng \\
+KPI      & Key Performance Indicator                & Chỉ số hiệu suất cốt yếu \\[3pt]
+
+\multicolumn{3}{l}{\textbf{– Ký hiệu toán học}}\\
+$\mathbf{x}_t$ & Input feature vector at time $t$   & Véc-tơ đặc trưng thời điểm $t$ \\
+$h_t$           & Hidden state                      & Trạng thái ẩn RNN/LSTM \\
+$c_t$           & Cell state                        & Trạng thái ô LSTM \\
+$\sigma(\cdot)$ & Sigmoid function                  & Hàm sigmoid \\
+$\tanh(\cdot)$  & Hyperbolic tangent               & Hàm tanh \\
+$\odot$         & Hadamard product                  & Phép nhân theo phần tử \\
+%--------------------------------------------------%
 \end{longtable}
+\endgroup
+
+\restoregeometry
+\cleardoublepage

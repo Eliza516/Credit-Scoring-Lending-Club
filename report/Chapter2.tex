@@ -1,126 +1,327 @@
-\section{PROBLEM FORMULATION AND THEORETICAL BACKGROUND}
-\label{ch:theory}
+\newpage
+\section*{CHƯƠNG 2. CƠ SỞ LÝ THUYẾT VÀ CÁC PHƯƠNG PHÁP LIÊN QUAN}
+\addcontentsline{toc}{section}{\numberline{}CHƯƠNG 2. CƠ SỞ LÝ THUYẾT VÀ CÁC PHƯƠNG PHÁP LIÊN QUAN}
 
-This chapter states the prediction task formally, reviews related work on credit scoring with Lending Club data, and summarises the models, metrics and statistical tools that are used in the experiments.
+Chương này trình bày các cơ sở lý thuyết và tổng quan nghiên cứu liên quan nhằm làm nền tảng cho việc thiết kế và triển khai mô hình phát hiện gian lận thẻ tín dụng được đề xuất trong đồ án. Mở đầu chương sẽ xác định rõ bài toán học mà mô hình cần giải quyết, phân tích các đặc trưng phức tạp vốn có của dữ liệu giao dịch thực tế như tính mất cân bằng, tính tuần tự và yêu cầu thời gian thực. Tiếp theo, chương sẽ điểm qua các hướng tiếp cận phổ biến trong nghiên cứu hiện nay, bao gồm cả các phương pháp học máy truyền thống và mô hình học sâu hiện đại, từ đó chỉ ra các ưu điểm, hạn chế và khoảng trống còn tồn tại. Dựa trên những phân tích đó, chương sẽ trình bày một số cơ sở lý thuyết liên quan đến các mô hình học sâu được sử dụng trong kiến trúc đề xuất, cũng như các hàm mất mát phù hợp trong bối cảnh dữ liệu không đồng đều.
 
-\subsection{Problem formulation}
-\label{sec:formulation}
+\setcounter{section}{2}
+\setcounter{subsection}{0}
+\setcounter{figure}{0}
+\setcounter{table}{0}
 
-\paragraph{Input.} For each loan $i$ the input is a vector $\mathbf{x}_i$ of features known when the application was assessed: loan amount, borrower declarations (income, employment length, home ownership, purpose, state), credit-bureau variables (FICO range, debt-to-income ratio, delinquencies, inquiries, revolving utilisation, account counts, \dots) and the platform's own \code{sub\_grade}. Features that are only observed after the loan is made are excluded by construction (Section~\ref{sec:leakage}).
+\subsection{Giới thiệu bài toán}
 
-\paragraph{Output.} A score $p_i=\hat{P}(y_i=1\mid\mathbf{x}_i)\in[0,1]$, where $y_i=1$ if the loan ends as \emph{Charged Off} and $y_i=0$ if it ends as \emph{Fully Paid}. The score is used to \emph{rank} applicants; no decision threshold is fixed, because the threshold depends on the lender's costs and risk appetite.
+Phát hiện gian lận thẻ tín dụng là một trong những bài toán quan trọng và đầy thách thức trong lĩnh vực tài chính – ngân hàng, nơi các hệ thống cần nhanh chóng nhận diện các giao dịch bất thường nhằm giảm thiểu thiệt hại và bảo vệ người dùng. Về bản chất, đây là một \textbf{bài toán phân loại nhị phân}, trong đó mục tiêu là xây dựng một mô hình có khả năng phân biệt giữa các giao dịch hợp lệ và các giao dịch có khả năng gian lận dựa trên các đặc trưng đầu vào. Với tập dữ liệu đã gán nhãn, bài toán học có thể được mô hình hóa như sau:
 
-\paragraph{Learning problem.} Let $t_i$ be the issue month of loan $i$ and let $t_1<t_2$ be two cut dates. Models are trained on $\{i: t_i<t_1\}$, compared on $\{i: t_1\le t_i<t_2\}$ and finally evaluated once on $\{i: t_i\ge t_2\}$. The goal is to maximise the out-of-time ranking quality
-\begin{equation}
-\mathrm{AUC}(s)=\Pr\big(s(\mathbf{x}^{+})>s(\mathbf{x}^{-})\big)+\tfrac12\Pr\big(s(\mathbf{x}^{+})=s(\mathbf{x}^{-})\big),
-\label{eq:auc}
-\end{equation}
-where $\mathbf{x}^{+}$ and $\mathbf{x}^{-}$ are the features of a randomly drawn defaulted and a randomly drawn fully-paid loan from the evaluation period \cite{hanley1982,fawcett2006}.
-
-\paragraph{Reference model.} The incumbent is the \code{sub\_grade} baseline: the score of a loan is the training-set default rate of its sub-grade. It uses one application-time variable and no fitted parameters other than 35 group means.
-
-\subsection{Related work}
-\label{sec:related}
-
-\subsubsection{Statistical credit scoring}
-
-Credit scoring has been studied for decades with discriminant analysis, logistic regression, trees and, more recently, ensembles. Hand and Henley's review of statistical methods for consumer credit scoring \cite{hand1997} and the practitioner text by Siddiqi on scorecard development \cite{siddiqi2006} describe the standard toolbox, including the conversion of log-odds to a points scale with a ``points to double the odds'' parameter, which Section~\ref{sec:metric-theory} uses.
-
-\subsubsection{Studies on Lending Club data}
-
-Serrano-Cinca et al.\ \cite{serrano2015} analyse 24,449 Lending Club loans using univariate tests, survival analysis and a logistic regression. According to the authors, the factors explaining default include loan purpose, annual income, housing situation, credit history and indebtedness, and the platform-assigned grade is the single most predictive factor, with accuracy improving when other information---especially the borrower's debt level---is added. This is the literature precedent for treating the grade as the benchmark that other variables must improve upon.
-
-Malekipirbazari and Aksakalli \cite{malekipirbazari2015} propose random forests for borrower status on Lending Club data from January 2012 to September 2014, restricted by the authors to about 68\,K loans that were fully paid or defaulted. They report that random forests outperform logistic regression, $k$-nearest neighbours and a support-vector classifier in their comparison (AUC about 0.71 versus 0.68 for logistic regression, as reported by the authors) and outperform FICO scores and Lending Club grades in identifying good borrowers. Their data, filters and split differ from ours, so the figures are not comparable with those in Chapter~\ref{ch:results}.
-
-Qian et al.\ \cite{qian2021} study \emph{dataset shift} in credit scoring on Lending Club data (1,160,066 records, 2018--2020 in their file). They argue that mixing periods when training and validating leaks future information and inflates offline results, and propose adversarial validation to select training data resembling the data to be predicted. We adopt their motivation---strict chronological evaluation---but not their method; we simply split by time.
-
-\subsubsection{Open-source projects}
-
-Several public repositories analyse the same file and are relevant to our design. We list them by name and technique only; the descriptions come from the projects' README files as summarised in the project documentation, and we have \emph{not} verified them against the repositories' code or outputs, so we do not quote their numbers.
 \begin{itemize}
-    \item \texttt{Arturo-GA/lendingclub-default-risk} \cite{gh_arturo}: out-of-time 70/15/15 split on matured loans only; our split follows the same idea.
-    \item \texttt{vaibhavkev/credit-risk} \cite{gh_vaibhav}: out-of-time evaluation on 36-month loans of 2012--2015 and comparison against the platform's grade as an incumbent.
-    \item \texttt{Tanish-Srivastava/credit-risk-scorecard} \cite{gh_tanish}: weight-of-evidence logistic scorecard compared with the platform grade, with a random split.
-    \item \texttt{Nasha14/Lending-Club-Loan-Default-Prediction} \cite{gh_nasha} and \texttt{Arnav618/lending-club-credit-risk} \cite{gh_arnav}: gradient-boosting models (XGBoost) compared with simpler baselines; the split protocol is not stated in the material we reviewed.
+    \item \textbf{Đầu vào}: là tập hợp các giao dịch của nhiều người dùng thực hiện qua thẻ tín dụng, trong đó mỗi người dùng có thể có ít hoặc nhiều giao dịch khác nhau theo thời gian. Mỗi giao dịch được biểu diễn bằng một vector đặc trưng $\mathbf{x}_t \in \mathbb{R}^F$, bao gồm các thông tin như thời gian, số tiền, danh mục chi tiêu, phương thức thanh toán,... Các giao dịch sau đó được tiền xử lý, chuẩn hóa và tổ chức lại dưới dạng chuỗi để làm đầu vào cho mô hình học.
+    
+    \item \textbf{Đầu ra}: xác suất $\hat{y} \in [0,1]$ biểu thị mức độ gian lận của giao dịch hiện tại, được so sánh với nhãn thực tế $y \in \{0,1\}$ để huấn luyện mô hình.
+    
+    \item \textbf{Hàm mục tiêu}: học một hàm ánh xạ $f: \mathbb{R}^{d \times F} \rightarrow [0,1]$ sao cho $f(X) \approx P(y = 1 \mid X)$, với $d$ là độ dài chuỗi giao dịch đầu vào và $F$ là số chiều đặc trưng.
 \end{itemize}
-Whether these repositories control leakage and time as strictly as we do is exactly what we could not confirm; hence the emphasis in this report on verifying each rule with code.
 
-\subsubsection{Positioning and gap}
+Bài toán này sở hữu nhiều đặc điểm phức tạp, đặt ra yêu cầu cao cho mô hình học:
 
-Table~\ref{tab:related} summarises the comparison. The studies show that (i) the platform grade is a strong predictor and the right benchmark \cite{serrano2015}, (ii) non-linear ensembles can improve on logistic regression in some set-ups \cite{malekipirbazari2015}, and (iii) time-respecting evaluation matters \cite{qian2021}. The gap we address is a student-scale, fully reproducible study that combines all three: an out-of-time protocol, an explicit \code{sub\_grade} baseline with bootstrap uncertainty, and an ablation that shows what happens to the other coefficients when the grade is removed.
+\begin{itemize}
+    \item \textbf{Dữ liệu bất cân bằng nghiêm trọng}: trong hầu hết các tập dữ liệu thực tế, tỷ lệ giao dịch gian lận thường nhỏ hơn 1\%, khiến các mô hình dễ bị lệch về lớp chiếm đa số.
+    
+    \item \textbf{Dữ liệu có tính chất chuỗi thời gian}: hành vi của người dùng chỉ được hiểu đầy đủ khi xét trong bối cảnh các giao dịch liên tiếp, đòi hỏi mô hình có khả năng học được sự phụ thuộc theo thời gian.
+    
+    \item \textbf{Dữ liệu phi cấu trúc và không đồng nhất}: các đặc trưng đầu vào bao gồm cả dữ liệu số, phân loại, thời gian, vị trí địa lý,… làm gia tăng độ phức tạp trong quá trình biểu diễn và trích xuất đặc trưng.
+    
+    \item \textbf{Yêu cầu xử lý thời gian thực}: trong nhiều hệ thống, kết quả dự đoán cần được đưa ra trong thời gian rất ngắn để ngăn chặn kịp thời các hành vi gian lận.
+\end{itemize}
 
-\begin{table}[H]
+Ngoài ra, hành vi gian lận thường thay đổi liên tục và có thể mang tính tổ chức, đòi hỏi mô hình cần có khả năng thích nghi tốt và phát hiện được các mẫu ẩn khó quan sát. Do đó, việc phát triển một mô hình phát hiện gian lận hiệu quả đòi hỏi phải giải quyết đồng thời nhiều khía cạnh: học được hành vi chuỗi, chọn lọc được đặc trưng quan trọng, và xử lý tốt bài toán mất cân bằng dữ liệu.
+
+
+\subsection{Các nghiên cứu liên quan}
+
+Trong những năm gần đây, bài toán phát hiện gian lận thẻ tín dụng đã nhận được nhiều sự quan tâm trong cộng đồng nghiên cứu, đặc biệt là với sự phát triển nhanh chóng của các mô hình học máy và học sâu. Các phương pháp được đề xuất có thể phân thành bốn nhóm chính, phản ánh quá trình tiến hóa trong tiếp cận bài toán: từ các mô hình truyền thống tuyến tính đến mô hình học sâu tuần tự, học trên đồ thị, và học chọn lọc đặc trưng.
+
+\subsubsection{Phương pháp học máy truyền thống}
+
+Các phương pháp học máy truyền thống được áp dụng rộng rãi trong bài toán phát hiện gian lận nhờ vào khả năng triển khai đơn giản, tốc độ huấn luyện nhanh và khả năng diễn giải mô hình. Trong phần này, một số mô hình tiêu biểu sẽ được trình bày chi tiết.
+
+\paragraph{K-Nearest Neighbors (KNN).}~
+
+\vspace{0.5em}
+
+KNN là một phương pháp phân loại không tham số, trong đó nhãn của điểm mới được xác định dựa trên đa số nhãn của $k$ điểm gần nhất trong tập huấn luyện. Khoảng cách thường được sử dụng là khoảng cách Euclid:
+\[
+d(\mathbf{x}_i, \mathbf{x}_j) = \sqrt{ \sum_{f=1}^{F} \left( x_i^{(f)} - x_j^{(f)} \right)^2 }
+\]
+\textit{Trong đó:} \\
+$\mathbf{x}_i, \mathbf{x}_j \in \mathbb{R}^F$: là các vector đặc trưng của hai giao dịch cần so sánh; \\
+$x_i^{(f)}$, $x_j^{(f)}$: là giá trị của đặc trưng thứ $f$ trong vector $\mathbf{x}_i$ và $\mathbf{x}_j$; \\
+$F$: là số chiều (số đặc trưng) của mỗi vector; \\
+$f$: là chỉ số đặc trưng, chạy từ 1 đến $F$.
+
+KNN đơn giản nhưng nhạy cảm với nhiễu và không phù hợp với tập dữ liệu lớn do chi phí tính toán cao trong giai đoạn dự đoán.
+
+\vspace{0.5em}
+
+\paragraph{Logistic Regression (LR).}~
+
+\vspace{0.5em}
+
+LR là mô hình phân loại tuyến tính dựa trên hàm sigmoid, ánh xạ xác suất xảy ra gian lận từ một tổ hợp tuyến tính của các đặc trưng đầu vào:
+\[
+P(y=1 \mid \mathbf{x}) = \frac{1}{1 + e^{-(\mathbf{w}^T \mathbf{x} + b)}}
+\]
+
+\textit{Trong đó:} \\
+$\mathbf{x} \in \mathbb{R}^F$: là vector đặc trưng đầu vào của giao dịch; \\
+$\mathbf{w}$: là vector trọng số cần học; \\
+$b$: là hệ số điều chỉnh (bias); \\
+$P(y=1 \mid \mathbf{x})$: là xác suất giao dịch thuộc lớp gian lận.
+
+Mô hình có ưu điểm về tốc độ huấn luyện và dễ diễn giải, tuy nhiên không thể biểu diễn được quan hệ phi tuyến giữa các đặc trưng.
+
+\vspace{0.5em}
+
+\paragraph{Decision Tree (DT).}~
+
+\vspace{0.5em}
+
+Cây quyết định là một mô hình học có giám sát đơn giản nhưng hiệu quả, được sử dụng phổ biến trong các bài toán phân loại. Mô hình hoạt động bằng cách phân chia dữ liệu đầu vào dựa trên các điều kiện rẽ nhánh, hình thành một cấu trúc cây nhị phân trong đó mỗi nút biểu diễn một điều kiện kiểm tra, còn mỗi lá đưa ra dự đoán. Ưu điểm của cây quyết định là khả năng giải thích cao và dễ triển khai. Tuy nhiên, nếu không kiểm soát độ sâu hoặc cắt tỉa hợp lý, cây rất dễ bị quá khớp (overfitting), làm giảm khả năng tổng quát hóa trên dữ liệu mới.
+
+
+\vspace{0.5em}
+
+\paragraph{Random Forest (RF).}~
+
+\vspace{0.5em}
+
+Random Forest là một mô hình học máy thuộc nhóm phương pháp tổ hợp (ensemble learning), được xây dựng từ tập hợp nhiều cây quyết định độc lập. Mỗi cây trong rừng được huấn luyện trên một tập con dữ liệu được chọn ngẫu nhiên có hoàn lại từ tập huấn luyện (theo kỹ thuật bagging), đồng thời mỗi lần phân chia nút, chỉ một tập con ngẫu nhiên của các đặc trưng được xét đến. Nhờ cơ chế này, các cây trong rừng có tính đa dạng cao, từ đó giảm thiểu phương sai của mô hình.
+
+Trong quá trình dự đoán, mỗi cây trong rừng đưa ra một kết quả riêng biệt; đầu ra cuối cùng được xác định bằng cách lấy trung bình (đối với bài toán hồi quy) hoặc bỏ phiếu đa số (đối với phân loại). Random Forest có khả năng tổng quát hóa tốt hơn so với cây quyết định đơn lẻ, ít bị ảnh hưởng bởi hiện tượng quá khớp và thường cho hiệu suất cao trên nhiều loại tập dữ liệu khác nhau. Ngoài ra, mô hình còn cho phép đánh giá mức độ quan trọng của từng đặc trưng, hỗ trợ việc chọn lọc đặc trưng hiệu quả trong các bài toán thực tế.
+
+
+\vspace{0.5em}
+
+\paragraph{XGBoost.}~
+
+\vspace{0.5em}
+
+Extreme Gradient Boosting (XGBoost) là một thuật toán boosting hiện đại, trong đó các cây quyết định được huấn luyện theo chuỗi để sửa sai dần. Mỗi cây được tối ưu hóa dựa trên đạo hàm bậc hai của hàm mất mát:
+\[
+\mathcal{L}^{(t)} = \sum_{i=1}^n \left[ g_i f_t(\mathbf{x}_i) + \frac{1}{2} h_i f_t^2(\mathbf{x}_i) \right] + \Omega(f_t)
+\]
+\textit{Trong đó:}  
+$n$ là số lượng mẫu huấn luyện;  
+$f_t(\mathbf{x}_i)$ là đầu ra của cây tại vòng lặp thứ $t$ cho mẫu $\mathbf{x}_i$;  
+$g_i = \frac{\partial \mathcal{L}}{\partial \hat{y}_i}$ là đạo hàm bậc một của hàm mất mát theo đầu ra mô hình trước đó;  
+$h_i = \frac{\partial^2 \mathcal{L}}{\partial \hat{y}_i^2}$ là đạo hàm bậc hai;  
+$\Omega(f_t)$ là hàm phạt độ phức tạp của cây $f_t$.
+
+
+XGBoost có khả năng xử lý tốt dữ liệu mất cân bằng và thường cho kết quả vượt trội trong thực nghiệm.
+
+\vspace{0.5em}
+
+\paragraph{LightGBM.}~
+
+\vspace{0.5em}
+
+LightGBM (Light Gradient Boosting Machine) là một thuật toán tăng cường (boosting) cây quyết định được thiết kế tối ưu cho hiệu suất và khả năng mở rộng. Mô hình sử dụng kỹ thuật chia dữ liệu theo histogram để giảm độ phức tạp tính toán, kết hợp với chiến lược tăng cường theo chiều sâu (leaf-wise growth with depth constraint), giúp tăng độ chính xác trong khi vẫn giữ thời gian huấn luyện thấp. LightGBM có khả năng xử lý tốt dữ liệu lớn và thưa (sparse), hỗ trợ song song hóa và GPU, nên đặc biệt phù hợp trong các hệ thống thực tế có yêu cầu về tốc độ và tài nguyên. Ngoài ra, mô hình còn tích hợp các cơ chế kiểm soát overfitting như early stopping, regularization và xử lý missing value tự động. Nhờ đó, LightGBM thường đạt hiệu suất cạnh tranh trên nhiều bài toán phân loại, hồi quy và xếp hạng.
+
+\vspace{0.5em}
+
+\paragraph{CatBoost.}~
+
+\vspace{0.5em}
+
+CatBoost là một thuật toán boosting được phát triển đặc biệt để xử lý hiệu quả các đặc trưng phân loại (categorical features) mà không cần tiền xử lý như one-hot encoding. Mô hình sử dụng cơ chế boosting có thứ tự (ordered boosting), cho phép giảm hiện tượng rò rỉ thông tin (target leakage) và cải thiện độ ổn định trong quá trình huấn luyện. Bên cạnh đó, CatBoost còn tích hợp thuật toán chuyển đổi đặc trưng dựa trên thống kê có điều kiện (conditional statistics), giúp học tốt hơn từ dữ liệu phân loại mà vẫn kiểm soát được hiện tượng quá khớp. Mô hình này thường cho kết quả mạnh mẽ trên các tập dữ liệu có đặc trưng không số, đồng thời đơn giản hóa quy trình tiền xử lý, phù hợp với các ứng dụng thực tế yêu cầu độ chính xác cao và dễ triển khai.
+
+\vspace{0.5em}
+
+Tổng kết lại, các mô hình học máy truyền thống vẫn giữ vai trò quan trọng trong các hệ thống phát hiện gian lận nhờ hiệu suất tính toán tốt và khả năng diễn giải. Tuy nhiên, do thiếu khả năng mô hình hóa hành vi chuỗi và các tương tác phi tuyến phức tạp, chúng thường không đạt hiệu quả cao khi áp dụng cho dữ liệu giao dịch thực tế có tính chất động và mất cân bằng cao.
+
+\vspace{0.5em}
+
+\subsubsection{Phương pháp tổ hợp trong học máy}
+
+Các phương pháp tổ hợp (ensemble methods) trong học máy là chiến lược xây dựng mô hình mạnh từ nhiều mô hình yếu bằng cách kết hợp dự đoán của chúng. Thay vì dựa vào một mô hình đơn lẻ, các phương pháp này tận dụng sự đa dạng của nhiều mô hình con để cải thiện độ chính xác, giảm phương sai và tăng tính ổn định. Hai kỹ thuật tổ hợp phổ biến là Stacking và Voting, thường được sử dụng như các lớp cuối trong pipeline phát hiện gian lận hoặc trong hệ thống gợi ý.
+
+\paragraph{Stacking Classifier.}~
+
+\vspace{0.5em}
+
+Stacking (stacked generalization) là một kỹ thuật tổ hợp nâng cao, trong đó nhiều mô hình cơ sở (base learners) được huấn luyện độc lập trên toàn bộ tập huấn luyện. Sau khi các mô hình cơ sở đưa ra dự đoán, các dự đoán này được sử dụng như đầu vào cho một mô hình tổng hợp (meta learner), thường là một thuật toán đơn giản như hồi quy logistic hoặc một cây quyết định nông. Mục tiêu của meta learner là học cách kết hợp đầu ra của các base learners để đưa ra quyết định chính xác hơn. 
+
+Stacking cho phép khai thác thế mạnh của các mô hình khác nhau (ví dụ: mô hình tuyến tính, cây quyết định, boosting) trong cùng một hệ thống, từ đó cải thiện hiệu suất trên các tập dữ liệu phức tạp hoặc không đồng nhất. Tuy nhiên, để tránh rò rỉ dữ liệu (data leakage), cần thực hiện kỹ thuật cross-validation trong quá trình huấn luyện meta learner.
+
+\paragraph{Voting Classifier.}~
+
+\vspace{0.5em}
+
+Voting là một kỹ thuật tổ hợp đơn giản nhưng hiệu quả, trong đó nhiều mô hình con được huấn luyện song song, và kết quả dự đoán cuối cùng được xác định thông qua cơ chế bỏ phiếu. Có hai hình thức phổ biến: hard voting, nơi mỗi mô hình đưa ra một nhãn dự đoán và nhãn chiếm đa số sẽ được chọn; và soft voting, nơi mỗi mô hình trả về phân phối xác suất trên các lớp, và xác suất trung bình sẽ được dùng để quyết định kết quả cuối cùng.
+
+Phương pháp voting đặc biệt hiệu quả khi các mô hình con có sai số độc lập tương đối và mức độ đa dạng cao. Mặc dù không phức tạp như stacking, voting thường được sử dụng như một baseline mạnh trong các hệ thống phát hiện gian lận, nơi tính ổn định và hiệu suất tổng thể là yêu cầu quan trọng. Voting cũng có ưu điểm là dễ triển khai, ít cần điều chỉnh siêu tham số phức tạp và hoạt động ổn định ngay cả với số lượng mô hình con lớn.
+
+\subsubsection{Mô hình học sâu tuyến tính và tuần tự}
+
+Với sự phát triển mạnh mẽ của học sâu, nhiều kiến trúc mạng nơ-ron đã được áp dụng trong bài toán phát hiện gian lận, giúp khắc phục các hạn chế của phương pháp học máy truyền thống như khả năng mô hình hóa phi tuyến và học các phụ thuộc theo thời gian. Trong phần này, hai mô hình học sâu chính được sử dụng trong đồ án là GRU và LSTM sẽ được trình bày.
+
+\paragraph{Gated Recurrent Unit (GRU).}~
+
+\vspace{0.5em}
+
+GRU là một kiến trúc mạng hồi tiếp được thiết kế để học các chuỗi có phụ thuộc theo thời gian. Cơ chế hoạt động của GRU dựa trên hai cổng điều khiển—cổng cập nhật và cổng đặt lại—giúp kiểm soát luồng thông tin giữa các bước thời gian. Nhờ cấu trúc gọn nhẹ và số lượng tham số ít hơn so với các mô hình tương đương, GRU có tốc độ huấn luyện nhanh và ít nguy cơ quá khớp, đồng thời vẫn đảm bảo khả năng ghi nhớ các phụ thuộc dài hạn trong dữ liệu.
+
+\paragraph{Long Short-Term Memory (LSTM).}~
+
+\vspace{0.5em}
+
+LSTM là một kiến trúc mạng hồi tiếp khác được thiết kế nhằm khắc phục vấn đề tiêu biến gradient trong RNN. Mỗi đơn vị LSTM bao gồm ba cổng điều khiển—cổng vào, cổng quên và cổng đầu ra—và một bộ nhớ tế bào cho phép lưu trữ thông tin dài hạn trong quá trình xử lý chuỗi. Cấu trúc này giúp LSTM linh hoạt trong việc quyết định thông tin nào cần lưu giữ hoặc loại bỏ, từ đó mô hình hóa tốt các chuỗi có ngữ cảnh phức tạp và phụ thuộc xa về mặt thời gian.
+
+\vspace{0.5em}
+
+\textbf{Tổng kết:} Cả GRU và LSTM đều được thiết kế để khắc phục nhược điểm của RNN trong việc học các phụ thuộc dài hạn. Trong khi LSTM có cấu trúc phức tạp hơn với nhiều cổng điều khiển và khả năng lưu trữ thông tin dài hạn rõ ràng hơn, GRU có kiến trúc đơn giản và thường cho hiệu quả tương đương trong nhiều tác vụ thực nghiệm. Việc lựa chọn giữa hai mô hình này phụ thuộc vào yêu cầu cụ thể về độ chính xác, tốc độ huấn luyện và tài nguyên tính toán sẵn có trong từng ứng dụng.
+
+
+\subsubsection{Mô hình học sâu chuyên biệt cho giao dịch tuần tự}
+
+\paragraph{Spatio-Temporal Attention Network (STAN).}~
+
+STAN \cite{cheng2020spatio} là một mô hình học sâu tiên tiến được thiết kế nhằm phát hiện gian lận thẻ tín dụng thông qua việc khai thác đồng thời các mối quan hệ theo thời gian và không gian trong chuỗi giao dịch. Mô hình này tích hợp cơ chế attention không-thời gian để lựa chọn các đặc trưng quan trọng, kết hợp với mạng nơ-ron tích chập ba chiều (3D ConvNet) để trích xuất biểu diễn đặc trưng phức tạp từ các chuỗi giao dịch dạng tensor. Đầu ra sau cùng được xử lý bởi các tầng fully connected nhằm dự đoán xác suất gian lận. Nhờ khả năng học các mẫu hành vi bất thường trong không gian-thời gian, STAN đã cho thấy hiệu quả vượt trội so với nhiều phương pháp truyền thống và hiện đại khác trong các nghiên cứu gần đây.
+
+\paragraph{Time-aware Hierarchical LSTM (TH-LSTM).}~
+
+TH-LSTM \cite{Xie2022} là một kiến trúc mạng hồi tiếp phân cấp được thiết kế để mô hình hóa hành vi giao dịch của người dùng theo nhiều cấp độ thời gian. Mỗi chuỗi giao dịch được chia nhỏ theo các đơn vị merchant, sau đó lần lượt được đưa vào hai cấp độ LSTM: cấp merchant và cấp chuỗi. Cách tổ chức này cho phép mô hình học được cả các đặc trưng giao dịch tại một merchant cụ thể lẫn xu hướng hành vi tổng thể theo thời gian của người dùng. Việc kết hợp thông tin thời gian một cách rõ ràng ở cả hai cấp giúp TH-LSTM đạt được hiệu suất tốt hơn so với các mô hình LSTM truyền thống, đặc biệt trong môi trường dữ liệu có tính chuỗi cao như giao dịch tài chính.
+
+
+\subsection{Nền tảng lý thuyết} \label{sec:theory}
+
+Phần này tổng hợp bốn khối kiến thức cốt lõi được sử dụng trong phần phương pháp: (i)~hai kiến trúc mạng hồi tiếp phổ biến—\textbf{GRU} và \textbf{LSTM}—để khai thác chuỗi giao dịch, và (ii)~hai hàm mất mát chủ đạo—\textbf{Binary Cross-Entropy (BCE)} và \textbf{Focal Loss}—để đối phó tình trạng mất cân bằng dữ liệu. Mục tiêu là cung cấp cơ sở khái niệm giúp lý giải các quyết định thiết kế trong mô hình đề xuất.
+
+%-------------------------------------------------
+\subsubsection{Kiến trúc mạng hồi tiếp}
+
+Phần này trình bày các kiến thức nền tảng sẽ được sử dụng xuyên suốt trong quá trình xây dựng và phân tích mô hình trong đồ án. Cụ thể, nội dung bao gồm hai kiến trúc mạng hồi tiếp phổ biến là GRU và LSTM, cùng với hai hàm mất mát là Binary Cross-Entropy (BCE) và Focal Loss, nhằm phục vụ cho việc xử lý chuỗi giao dịch và giải quyết vấn đề mất cân bằng dữ liệu.
+
+\paragraph{Gated Recurrent Unit (GRU).}~
+
+\vspace{0.5em}
+
+GRU là một biến thể nhẹ hơn của LSTM nhưng vẫn đảm bảo khả năng ghi nhớ dài hạn trong chuỗi dữ liệu. GRU sử dụng hai cơ chế chính là \textit{cổng cập nhật} (update gate) và \textit{cổng đặt lại} (reset gate) để kiểm soát thông tin nào được giữ lại và thông tin nào bị lãng quên tại mỗi bước thời gian.
+
+Cổng cập nhật \(\mathbf{z}_t\) xác định phần nào của trạng thái ẩn trước đó cần được giữ lại để chuyển sang bước tiếp theo, trong khi cổng đặt lại \(\mathbf{r}_t\) điều khiển mức độ quên trạng thái cũ khi tạo ra trạng thái mới tiềm năng \(\tilde{\mathbf{h}}_t\). Các cổng này hoạt động phối hợp để tạo ra trạng thái ẩn mới \(\mathbf{h}_t\) bằng cách trộn giữa thông tin cũ và mới một cách có chọn lọc.
+
+Toàn bộ quá trình này được thể hiện qua công thức sau:
+
+\begin{align}
+\mathbf{z}_t &= \sigma(\mathbf{W}_z \mathbf{x}_t + \mathbf{U}_z \mathbf{h}_{t-1}) \\
+\mathbf{r}_t &= \sigma(\mathbf{W}_r \mathbf{x}_t + \mathbf{U}_r \mathbf{h}_{t-1}) \\
+\tilde{\mathbf{h}}_t &= \tanh(\mathbf{W}_h \mathbf{x}_t + \mathbf{U}_h (\mathbf{r}_t \odot \mathbf{h}_{t-1})) \\
+\mathbf{h}_t &= (1 - \mathbf{z}_t) \odot \mathbf{h}_{t-1} + \mathbf{z}_t \odot \tilde{\mathbf{h}}_t
+\end{align}
+
+Trong đó:
+\begin{itemize}
+    \item \(\sigma\) là hàm sigmoid; \(\tanh\) là hàm hyperbolic tangent.
+    \item \(\odot\) là phép nhân từng phần tử (element-wise multiplication).
+\end{itemize}
+
+Hình~\ref{fig:gru-diagram} minh họa kiến trúc bên trong một đơn vị GRU. Dữ liệu đầu vào  và trạng thái ẩn  được xử lý thông qua hai cổng để cho ra trạng thái ẩn mới .
+
+\begin{figure}[H]
 \centering
-\caption{Comparison of the cited papers with this study (information as stated by the cited authors; the present study's values are taken from Chapter~\ref{ch:results}).}
-\label{tab:related}
-\small
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
-\hline
-\textbf{Work} & \textbf{Data} & \textbf{Methods} & \textbf{Evaluation focus} \\
-\hline
-Serrano-Cinca et al.\ \cite{serrano2015} & 24,449 Lending Club loans & Univariate tests, survival analysis, logistic regression & Determinants of default; predictive value of the grade \\
-\hline
-Malekipirbazari and Aksakalli \cite{malekipirbazari2015} & Lending Club, Jan 2012--Sep 2014, about 68\,K labelled loans & Random forest vs.\ LR, $k$-NN, SVM & Comparison with FICO and Lending Club grades \\
-\hline
-Qian et al.\ \cite{qian2021} & Lending Club, 1,160,066 records (2018--2020) & LightGBM with adversarial validation & Dataset shift and data splitting \\
-\hline
-\textbf{This study} & 589,488 matured 36-month loans, 2012--2015 & \code{sub\_grade} baseline, LR (L2), tree, RF, HistGB & Out-of-time AUC/Gini/KS; paired-bootstrap CIs against the baseline; ablation without \code{sub\_grade} \\
-\hline
-\end{tabularx}
-\end{table}
+\includegraphics[width=0.45\textwidth]{Images/GRU.png}
+\caption{Cấu trúc bên trong một đơn vị GRU}
+\label{fig:gru-diagram}
+\end{figure}
 
-\subsection{Models}
-\label{sec:model-theory}
+GRU có ưu điểm là số lượng tham số ít hơn LSTM do không sử dụng bộ nhớ riêng biệt, từ đó giúp mô hình hội tụ nhanh hơn và tiêu tốn ít tài nguyên tính toán hơn, rất phù hợp với các ứng dụng thời gian thực như phát hiện gian lận giao dịch.
 
-All models take the standardised and one-hot-encoded feature matrix of Section~\ref{sec:pipeline} as input and output a probability of default.
+\vspace{0.5em}
 
-\subsubsection{Logistic regression with L2 regularisation}
+\paragraph{Long Short-Term Memory (LSTM).}~
 
-Logistic regression models the log-odds of default as linear in the features, $\Pr(y=1\mid\mathbf{x})=\sigma(\mathbf{w}^{\top}\mathbf{x}+b)$ with $\sigma(z)=1/(1+e^{-z})$. In scikit-learn the parameters minimise
+\vspace{0.5em}
+LSTM là một kiến trúc mạng hồi tiếp được thiết kế để giải quyết vấn đề gradient biến mất trong chuỗi dài. Khác với GRU, LSTM sử dụng một bộ nhớ riêng biệt gọi là \(\mathbf{C}_t\) để lưu giữ thông tin quan trọng trong thời gian dài. Cấu trúc của LSTM gồm ba cổng chính:
+
+\begin{itemize}
+  \item \textbf{Cổng quên} (\( \mathbf{f}_t \)): Quyết định phần nào của bộ nhớ trước \( \mathbf{C}_{t-1} \) cần bị loại bỏ.
+  \item \textbf{Cổng đầu vào} (\( \mathbf{i}_t \)): Xác định mức độ thông tin mới \( \tilde{\mathbf{C}}_t \) được thêm vào bộ nhớ.
+  \item \textbf{Cổng đầu ra} (\( \mathbf{o}_t \)): Kiểm soát thông tin nào trong bộ nhớ được sử dụng làm đầu ra \( \mathbf{h}_t \).
+\end{itemize}
+
+Các công thức cập nhật trong LSTM như sau:
+
+\begin{align}
+\mathbf{f}_t &= \sigma(\mathbf{W}_f \mathbf{x}_t + \mathbf{U}f \mathbf{h}{t-1}) \\
+\mathbf{i}_t &= \sigma(\mathbf{W}_i \mathbf{x}_t + \mathbf{U}i \mathbf{h}{t-1}) \\
+\tilde{\mathbf{C}}_t &= \tanh(\mathbf{W}_c \mathbf{x}_t + \mathbf{U}c \mathbf{h}{t-1}) \\
+\mathbf{C}_t &= \mathbf{f}t \odot \mathbf{C}{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{C}}_t \\
+\mathbf{o}_t &= \sigma(\mathbf{W}_o \mathbf{x}_t + \mathbf{U}o \mathbf{h}{t-1}) \\
+\mathbf{h}_t &= \mathbf{o}_t \odot \tanh(\mathbf{C}_t)
+\end{align}
+
+Với:
+\begin{itemize}
+\item Hàm kích hoạt sigmoid \(\sigma\) được dùng để giới hạn giá trị đầu ra trong khoảng [0,1]; trong khi đó, \(\tanh\) giúp tạo ra đầu ra nằm trong [-1, 1].
+\item Ký hiệu \(\odot\) là phép nhân từng phần tử (element-wise multiplication).
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.55\textwidth]{Images/LSTM.png}
+\caption{Cấu trúc bên trong một đơn vị LSTM}
+\label{fig:lstm-diagram}
+\end{figure}
+
+LSTM có khả năng lưu giữ thông tin lâu dài thông qua trạng thái bộ nhớ , từ đó rất phù hợp để học các mối quan hệ phức tạp trong chuỗi hành vi người dùng như các chu kỳ chi tiêu định kỳ hoặc thay đổi bất thường.
+
+\subsubsection{Hàm mất mát}
+
+Trong ngữ cảnh phát hiện gian lận thẻ tín dụng (Credit Card Fraud Detection – CCFD), dữ liệu huấn luyện thường có sự mất cân bằng nghiêm trọng, với tỷ lệ giao dịch gian lận chỉ chiếm một phần rất nhỏ so với giao dịch hợp lệ. Do đó, việc lựa chọn hàm mất mát phù hợp có vai trò then chốt trong việc huấn luyện mô hình sao cho không bị thiên lệch về lớp đa số và vẫn duy trì khả năng phát hiện các mẫu gian lận hiếm gặp. 
+
+Trong đồ án này, hai hàm mất mát phổ biến và hiệu quả được lựa chọn là Binary Cross-Entropy (BCE) và Focal Loss. Cả hai đều được sử dụng rộng rãi trong các bài toán phân loại nhị phân có mất cân bằng lớp, mỗi hàm có ưu điểm riêng và sẽ được trình bày chi tiết dưới đây.
+
+\paragraph{Binary Cross-Entropy (BCE).}~
+
+Binary Cross-Entropy là một trong những hàm mất mát cơ bản và phổ biến nhất trong các bài toán phân loại nhị phân, đặc biệt phù hợp với bài toán phát hiện gian lận thẻ tín dụng. BCE đo lường sai khác giữa xác suất dự đoán của mô hình và nhãn thực tế, với trực giác rõ ràng: nếu mô hình dự đoán đúng và chắc chắn, tổn thất thấp; nếu sai hoặc thiếu tự tin, tổn thất cao. Công thức của BCE được định nghĩa như sau:
+
 \begin{equation}
-\tfrac12\lVert\mathbf{w}\rVert_2^2 + C\sum_{i=1}^{n}\Big[-y_i\log p_i-(1-y_i)\log(1-p_i)\Big],
-\label{eq:lr}
+    \mathcal{L}_{\text{BCE}} = - \left[ y \cdot \log(\hat{y}) + (1 - y) \cdot \log(1 - \hat{y}) \right]
 \end{equation}
-so a \emph{smaller} $C$ means a \emph{stronger} penalty. The squared-norm penalty is the ridge penalty of Hoerl and Kennard \cite{hoerl1970}; it shrinks coefficients, stabilises estimates when features are correlated and is the reason features must be standardised so the penalty treats them on a common scale. The intercept is not penalised. Coefficients are interpretable as changes in log-odds per one standard deviation of a feature (for numeric features) or per category (for one-hot columns).
 
-\subsubsection{Decision tree}
+Trong đó, \( y \in \{0, 1\} \) là nhãn thực tế và \( \hat{y} \in (0, 1) \) là xác suất dự đoán. BCE có ưu điểm dễ tối ưu và hội tụ nhanh, tuy nhiên trong các tình huống mất cân bằng lớp nghiêm trọng—như khi tỷ lệ giao dịch gian lận rất thấp—BCE có xu hướng thiên lệch về lớp chiếm đa số, làm giảm khả năng nhận diện các giao dịch bất thường (recall thấp). Trong mô hình MaRENet, BCE vẫn đóng vai trò quan trọng nhờ sự ổn định trong huấn luyện và được sử dụng như một thành phần trong hàm mất mát hỗn hợp.
 
-A classification tree (CART \cite{breiman1984}) recursively splits the feature space with axis-parallel thresholds chosen to reduce impurity, and predicts the default rate of the training loans in each leaf. It captures non-linearities and interactions but has high variance unless depth and leaf size are limited; here \code{max\_depth} is tuned and \code{min\_samples\_leaf}$=50$.
+\paragraph{Focal Loss.}~
 
-\subsubsection{Random forest}
+Focal Loss được thiết kế nhằm khắc phục nhược điểm của BCE trong các bài toán có mất cân bằng lớp cao. Hàm này làm giảm trọng số các mẫu dễ phân loại, đồng thời tăng ảnh hưởng của các mẫu khó—thường là các giao dịch gian lận hiếm gặp. Focal Loss được định nghĩa dựa trên BCE như sau:
 
-A random forest \cite{breiman2001} averages many trees, each grown on a bootstrap sample of the training loans and, at each split, on a random subset of features. Averaging reduces variance relative to a single deep tree. The tuned hyperparameters are the number of trees, maximum depth and minimum leaf size.
-
-\subsubsection{Histogram gradient boosting}
-
-Gradient boosting \cite{friedman2001} builds trees sequentially, each fitted to the gradient of the log-loss at the current predictions, and adds them with a shrinkage factor (\code{learning\_rate}). The histogram variant bins each feature into at most 256 bins before searching splits, which makes training on hundreds of thousands of rows fast; scikit-learn's implementation follows the design of LightGBM \cite{ke2017,pedregosa2011}. The tuned hyperparameters are the number of boosting iterations, maximum depth and learning rate.
-
-\subsection{Evaluation metrics and statistical tools}
-\label{sec:metric-theory}
-
-\paragraph{ROC-AUC and Gini.} The ROC curve plots the true-positive rate against the false-positive rate as the score threshold varies; its area is the AUC of Equation~\eqref{eq:auc}. A random ranking has AUC $0.5$. The Gini coefficient used in credit scoring is a linear rescaling,
 \begin{equation}
-\mathrm{Gini}=2\,\mathrm{AUC}-1.
+    \mathcal{L}_{\text{Focal}} = \alpha (1 - \hat{p}_t)^\gamma \cdot \mathcal{L}_{\text{BCE}}, \quad \text{với } 
+    \hat{p}_t = 
+    \begin{cases}
+        \hat{y} & \text{nếu } y = 1 \\
+        1 - \hat{y} & \text{nếu } y = 0
+    \end{cases}
 \end{equation}
 
-\paragraph{KS statistic.} The Kolmogorov--Smirnov statistic \cite{massey1951} is the maximum vertical gap between the cumulative score distributions of defaulters and non-defaulters; equivalently
-\begin{equation}
-\mathrm{KS}=\max_{\tau}\big[\mathrm{TPR}(\tau)-\mathrm{FPR}(\tau)\big].
-\end{equation}
+Trong đó, \(\alpha\) là hệ số cân bằng lớp và \(\gamma\) điều khiển mức độ tập trung vào các mẫu khó; thường chọn \(\alpha = 0.25\), \(\gamma = 2\) cho các bài toán gian lận. Bằng cách tập trung vào những trường hợp mà mô hình khó phân biệt, Focal Loss giúp cải thiện khả năng phát hiện lớp thiểu số mà không làm giảm độ chính xác tổng thể. Trong đồ án này, Focal Loss được sử dụng nhằm nâng cao độ nhạy (Recall) của mô hình, đặc biệt trong bối cảnh dữ liệu bị mất cân bằng nghiêm trọng.
 
-\paragraph{Overfitting check.} For each model we report $\Delta_{\text{train-val}}=\mathrm{AUC}_{\text{train}}-\mathrm{AUC}_{\text{val}}$. A large positive gap indicates that the model fits the training period better than later loans. A negative gap is possible when the validation period is easier to rank than the training period; it is reported, not interpreted away.
+\vspace{0.5em}
 
-\paragraph{Time-ordered cross-validation.} Hyperparameters are chosen by \code{TimeSeriesSplit} with three splits: the training set (sorted by issue date) is divided into four consecutive blocks; fold $k$ trains on the first $k$ blocks and validates on block $k{+}1$ \cite{bergmeir2012}. Unlike shuffled $K$-fold, no fold ever trains on loans issued after the loans it is scored on.
+\textbf{Tổng kết.} Cả BCE và Focal Loss đều được triển khai độc lập trong quá trình thực nghiệm và có thể kết hợp linh hoạt nhằm tối ưu hóa hiệu quả huấn luyện. BCE cung cấp tính ổn định và khả năng hội tụ nhanh, trong khi Focal Loss giúp mô hình chú trọng vào các mẫu gian lận khó phát hiện. Sự kết hợp của hai hàm này cho phép đạt được sự cân bằng giữa độ chính xác và độ nhạy trong mô hình MaRENet.
 
-\paragraph{Paired bootstrap for AUC differences.} To judge whether model $A$ beats model $B$ on a validation set of size $n$ we resample the $n$ loans with replacement $B=1{,}000$ times \cite{efron1979}. For resample $b$ we compute $\Delta^{(b)}=\mathrm{AUC}_A^{(b)}-\mathrm{AUC}_B^{(b)}$ on the \emph{same} resampled loans (a paired design, which cancels the shared sampling noise). The 2.5\% and 97.5\% percentiles of $\{\Delta^{(b)}\}$ form a 95\% interval; if it excludes $0$ we call the difference statistically distinguishable from sampling noise. The interval reflects sampling variability of the validation loans only; it does not capture variability from refitting the models or from time.
 
-\paragraph{Points-based scorecard.} A model probability $p$ is converted to points by
-\begin{equation}
-\text{Score}=\text{Offset}-\text{Factor}\cdot\ln\frac{p}{1-p},\qquad \text{Factor}=\frac{\mathrm{PDO}}{\ln 2},\quad \text{Offset}=S_0-\text{Factor}\cdot\ln o_0,
-\label{eq:score}
-\end{equation}
-where $S_0$ is the reference score at default odds $o_0$ and each additional $\mathrm{PDO}$ points halves the default odds \cite{siddiqi2006}. We use $\mathrm{PDO}=20$, $S_0=600$ at $o_0=1/5$ (a default rate of about 16.7\%) and clip scores to $[300,850]$. These constants are conventions chosen for the exercise; we did not check them against any official standard.
 
-\subsection{Chapter summary}
+\subsection{Kết luận chương 2}
 
-The task is a time-respecting binary ranking problem benchmarked against the platform's \code{sub\_grade}. The literature supports using the grade as the benchmark, comparing logistic regression with tree ensembles and evaluating chronologically. The models, metrics, time-ordered tuning and paired bootstrap defined here are applied in Chapter~\ref{ch:method} and evaluated in Chapter~\ref{ch:results}.
+\addcontentsline{toc}{subsection}{\numberline{}Kết luận chương 2}
+
+Chương 2 đã cung cấp một bức tranh tổng quan, chi tiết và có hệ thống về các cơ sở lý thuyết, cũng như những hướng tiếp cận nổi bật liên quan đến bài toán phát hiện gian lận thẻ tín dụng. Trước hết, chương đã xác định rõ bản chất của bài toán—một bài toán phân loại nhị phân với nhiều thách thức đặc thù như dữ liệu cực kỳ mất cân bằng, tính tuần tự phức tạp và yêu cầu phản hồi thời gian thực. Những đặc điểm này đặt ra các tiêu chí khắt khe cho thiết kế mô hình, từ kiến trúc mạng cho đến hàm mất mát.
+
+Tiếp theo, chương đã khảo sát sâu rộng các nhóm phương pháp hiện có. Các mô hình học máy truyền thống (KNN, LR, DT, RF, XGBoost, LightGBM, CatBoost) cho ta cái nhìn về những ưu điểm về tốc độ, khả năng diễn giải và tiềm năng xử lý dữ liệu vừa phải, đồng thời cũng chỉ ra giới hạn khi phải mô hình hóa quan hệ phi tuyến và hành vi chuỗi phức tạp. Các chiến lược tổ hợp như Stacking và Voting nêu bật khả năng kết hợp điểm mạnh của nhiều mô hình cơ sở để tăng độ chính xác và giảm phương sai. Trên bình diện học sâu, GRU và LSTM mở ra hướng tiếp cận mạnh mẽ nhờ khả năng khai thác phụ thuộc dài hạn; trong khi các kiến trúc chuyên biệt như STAN và TH-LSTM chứng minh hiệu quả vượt trội khi đồng thời nắm bắt thông tin không–thời gian hoặc cấu trúc phân cấp của chuỗi giao dịch.
+
+Chương cũng đã phân tích hai hàm mất mát cốt lõi—Binary Cross-Entropy và Focal Loss—như những công cụ trung tâm để tối ưu hóa mô hình trong bối cảnh dữ liệu mất cân bằng nghiêm trọng. Việc kết hợp linh hoạt BCE (độ ổn định, hội tụ nhanh) với Focal Loss (tăng cường trọng số cho mẫu khó) tạo nền tảng vững chắc cho mục tiêu tối đa hóa cả độ chính xác (precision) lẫn độ nhạy (recall), vốn là hai thước đo tối quan trọng đối với các hệ thống chống gian lận.
+
+Tóm lại, những tri thức và phân tích trong Chương 2 không chỉ giúp định vị bài toán một cách chuẩn xác mà còn làm rõ khoảng trống nghiên cứu và động lực lựa chọn kiến trúc trong mô hình đề xuất. Đây chính là cơ sở lý luận vững chắc để bước sang Chương 3, nơi các quyết định thiết kế—từ cấu trúc mạng, quy trình tiền xử lý, đến chiến lược huấn luyện và đánh giá—sẽ được trình bày chi tiết, nhằm hiện thực hóa một hệ thống phát hiện gian lận thẻ tín dụng vừa chính xác, vừa đáp ứng yêu cầu thời gian thực của các ứng dụng tài chính hiện đại.
+
+

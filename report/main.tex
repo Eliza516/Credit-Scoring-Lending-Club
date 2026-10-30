@@ -1,51 +1,49 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Report: Lending Club credit default scoring (Statistical Learning, DS66A/DS66B)
-% Structure follows the supplied Report_template (NEU School of Technology).
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\documentclass{article}
+\documentclass{article} % Tạo một bản báo cáo
+\usepackage{cases} 
 \usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage[fontsize=13pt]{scrextend}
+\usepackage[T5]{fontenc} % Để sử dụng Tiếng Việt
+\usepackage{siunitx}
+\usepackage[fontsize=13pt]{scrextend} % Set fontsize=13pt
 \usepackage{amssymb}
 \usepackage[paperheight=29.7cm,paperwidth=21cm,
             inner=3cm,outer=2cm,top=2cm,bottom=2.5cm,
             twoside]{geometry}
 
-\usepackage{mathptmx}
-\usepackage{graphicx}
-\usepackage{float}
-\usepackage{tikz}
-\usetikzlibrary{calc}
-\usepackage{indentfirst}
-\renewcommand{\baselinestretch}{1.2}
-\setlength{\parskip}{6pt}
-\setlength{\parindent}{1cm}
-\usepackage{titlesec}
-\usepackage{chngcntr}
-\setcounter{secnumdepth}{4}
-\titlespacing*{\section}{0pt}{0pt}{30pt}
-\titleformat{\section}
-  {\fontsize{16pt}{20pt}\selectfont\bfseries\centering}
-  {CHAPTER \thesection.}{0.5em}{}
 
-\titlespacing*{\subsection}{0pt}{10pt}{0pt}
+
+\usepackage{mathptmx} % Time New Roman
+\usepackage{graphicx} % Thư viện chèn ảnh
+\usepackage{float} % Set vị trí chèn ảnh
+\usepackage{tikz} % Thư viện tạo khung bìa
+\usetikzlibrary{calc} % Thư viện tikz
+\usepackage{indentfirst} % Thư viện thụt đầu dòng
+\renewcommand{\baselinestretch}{1.2} % Giãn dòng 1.2
+\setlength{\parskip}{6pt} % Spacing after
+\setlength{\parindent}{1cm} % Set khoảng cách thụt đầu dòng mỗi đoạn
+\usepackage{titlesec} % Thư viện để set up các kiểu chữ
+\setcounter{secnumdepth}{4} % 4 Heading
+\titlespacing*{\section}{0pt}{0pt}{30pt} % Heading 1
+\titleformat{\section}
+  {\fontsize{16pt}{0pt}\selectfont\bfseries\centering}   % đổi sang centering
+  {CHƯƠNG \thesection.}{0.5em}{}
+
+
+\titlespacing*{\subsection}{0pt}{10pt}{0pt} % Heading 2
 \titleformat*{\subsection}{\fontsize{14pt}{0pt}\selectfont \bfseries}
 
-\titlespacing*{\subsubsection}{0pt}{10pt}{0pt}
+\titlespacing*{\subsubsection}{0pt}{10pt}{0pt} % Heading 3
 \titleformat*{\subsubsection}{\fontsize{13pt}{0pt}\selectfont \bfseries \itshape}
 
-\titlespacing*{\paragraph}{0pt}{10pt}{0.6em}
+\titlespacing*{\paragraph}{0pt}{10pt}{0pt} % Heading 4
 \titleformat*{\paragraph}{\fontsize{13pt}{0pt}\selectfont \itshape}
 
-\counterwithin{figure}{section}
-\counterwithin{table}{section}
-\counterwithin{equation}{section}
-\renewcommand{\figurename}{\fontsize{12pt}{0pt}\selectfont \bfseries Figure}
+\renewcommand{\figurename}{\fontsize{12pt}{0pt}\selectfont \bfseries Hình}
 \renewcommand{\thefigure}{\thesection.\arabic{figure}}
 \usepackage[font=bf]{caption}
 \captionsetup[figure]{labelsep=space}
 
-\renewcommand{\tablename}{\fontsize{12pt}{0pt}\selectfont \bfseries Table}
+\renewcommand{\tablename}{\fontsize{12pt}{0pt}\selectfont \bfseries Bảng}
 \renewcommand{\thetable}{\thesection.\arabic{table}}
 \captionsetup[table]{labelsep=space}
 
@@ -57,19 +55,23 @@
 \newcolumntype{d}{>{\hsize=.1\hsize}X}
 \newcolumntype{a}{>{\hsize=1.1\hsize}X}
 \newcolumntype{g}{>{\hsize=5\hsize}X}
+\renewcommand{\tabularxcolumn}[1]{>{\small}m{#1}}
 
-\renewcommand{\theequation}{\thesection.\arabic{equation}}
-\usepackage{amsthm}
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{defn}[theorem]{Definition}
+\renewcommand{\theequation}{\thesection.\arabic{equation}} % Thay đổi đánh số phương trình mặc định
+\newtheorem{theorem}{Định lý}[section]
+\newtheorem{defn}[theorem]{Định nghĩa}
+\newtheorem{corollary}[theorem]{Hệ quả}
+\newtheorem{lemma}[theorem]{Bổ đề}
 
-\renewcommand{\contentsname}{TABLE OF CONTENTS}
-\renewcommand{\listfigurename}{LIST OF FIGURES}
-\renewcommand{\listtablename}{LIST OF TABLES}
-\renewcommand{\refname}{REFERENCES}
+\usepackage{lipsum} % Thư viện tạo chữ linh tinh.
+\renewcommand{\contentsname}{MỤC LỤC}
+\renewcommand{\listfigurename}{DANH MỤC HÌNH VẼ}
+\renewcommand{\listtablename}{DANH MỤC BẢNG BIỂU}
+\renewcommand{\refname}{TÀI LIỆU THAM KHẢO}
+\renewcommand{\refname}{PHỤ LỤC}
 
-\usepackage[hidelinks,unicode]{hyperref}
-\usepackage{url}
+
+\usepackage[hidelinks,unicode]{hyperref}   % ẩn khung & màu
 \usepackage{colortbl}
 \usepackage{emptypage}
 \definecolor{LightCyan}{rgb}{0.88,1,1}
@@ -77,25 +79,25 @@
 \newcounter{loopcntr}
 \newcommand{\rpt}[2][1]{\forloop{loopcntr}{0}{\value{loopcntr}<#1}{#2}}
 \usepackage{amsmath}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{bbm}
 \usepackage{ragged2e}
-\usepackage{enumitem}
-\setlist[itemize]{leftmargin=2em, labelindent=0pt, itemsep=0.3\baselineskip}
-\setlist[enumerate]{leftmargin=2em, labelindent=0pt, itemsep=0.3\baselineskip}
 
-% project-wide macros
-\newcommand{\code}[1]{\texttt{\small #1}}
-\newcommand{\todo}[1]{\textbf{[#1]}}
+% ----------  enumitem (mới)  --------------------------------------
+\usepackage{enumitem}                %% <--- NEW
+\setlist[itemize]{leftmargin=2em, labelindent=0pt, itemsep=0.5\baselineskip}
 
 \newcommand{\SpecialPage}[2]{%
   \cleardoublepage
-  \pagestyle{empty}
+  \pagestyle{empty} % Ẩn số trang toàn bộ
   \newgeometry{left=3.5cm,right=2cm,top=3cm,bottom=3cm}
   \begin{center}{\bfseries\LARGE #1}\end{center}\vspace{1em}
   \setlength{\parindent}{1.25cm}\justifying
   \input{#2}
   \cleardoublepage
   \restoregeometry
-  \pagestyle{plain}
+  \pagestyle{plain} % Bật lại đánh số trang sau phần này
 }
 
 \newcommand{\SpecialPageNoClear}[2]{%
@@ -107,98 +109,119 @@
   \restoregeometry
 }
 
+
 \newcommand{\FixedChapter}[1]{%
-  \newgeometry{left=3cm,right=2cm,top=2cm,bottom=2.5cm}%
-  \input{#1}%
-  \restoregeometry%
+  \newgeometry{left=3cm,right=2cm,top=2cm,bottom=2.5cm,oneside}% 
+  \input{#1}% 
+  \restoregeometry% 
 }
 
 \usepackage{cite}
 
+
 \begin{document}
 
-\input{Cover}
+\input{Bia} % Bìa đồ án.
 
-\input{Evaluation}
+\input{DanhGia}
 
-\SpecialPage{PREFACE}{Preface}
+\SpecialPage{LỜI NÓI ĐẦU}{LoiNoiDau}
 
-\SpecialPage{DECLARATION}{Declaration}
+\SpecialPage{LỜI CAM ĐOAN}{LoiCamDoan}
 
-% TABLE OF CONTENTS (page numbers hidden)
+% MỤC LỤC (ẩn số trang toàn bộ)
 \cleardoublepage
 \begingroup
-\pagestyle{empty}
-\newgeometry{left=3cm,right=2cm,top=2cm,bottom=2.5cm}
+\pagestyle{empty}  % <-- ẩn số toàn bộ mục lục
+\newgeometry{left=3cm,right=2cm,top=2cm,bottom=2.5cm,oneside}
 \setlength{\parindent}{0pt}
 \tableofcontents
 \endgroup
 
-\thispagestyle{empty}
-\newpage
+% CHÈN TRANG TRẮNG DUY NHẤT
+\thispagestyle{empty}        % Ẩn số trang trang trống
+\newpage                     % Xuống dòng 1 lần là đủ
+% KHÔNG CẦN cleardoublepage hoặc null nữa
 
-% ROMAN PAGE NUMBERS
+% BẮT ĐẦU SỐ TRANG LA MÃ
 \cleardoublepage
 \pagenumbering{roman}
 \setcounter{page}{1}
 \pagestyle{plain}
 
-% ABBREVIATIONS
+% DANH MỤC KÝ HIỆU
 \phantomsection
-\addcontentsline{toc}{section}{LIST OF SYMBOLS AND ABBREVIATIONS}
+\addcontentsline{toc}{section}{DANH MỤC KÝ HIỆU VÀ CHỮ VIẾT TẮT}
 \input{Abbreviations}
-\thispagestyle{plain}
+\thispagestyle{plain}  % <-- Đặt SAU input mới có tác dụng với trang đó
 \cleardoublepage
 
-% LIST OF FIGURES
+
+% DANH MỤC HÌNH
 {\let\oldnumberline\numberline
- \renewcommand{\numberline}{Figure~\oldnumberline}
+ \renewcommand{\numberline}{Hình~\oldnumberline}
  \listoffigures}
-\phantomsection\addcontentsline{toc}{section}{\numberline {} LIST OF FIGURES}
+\phantomsection\addcontentsline{toc}{section}{\numberline {} DANH MỤC HÌNH VẼ}
 
 \clearpage
 
-% LIST OF TABLES
+% DANH MỤC BẢNG
 {\let\oldnumberline\numberline
- \renewcommand{\numberline}{Table~\oldnumberline}
+ \renewcommand{\numberline}{Bảng~\oldnumberline}
  \listoftables}
-\phantomsection\addcontentsline{toc}{section}{\numberline {} LIST OF TABLES}
+\phantomsection\addcontentsline{toc}{section}{\numberline {} DANH MỤC BẢNG BIỂU}
 
 \setlength{\parindent}{1cm}
 \restoregeometry
 \cleardoublepage
 \pagestyle{plain}
 
-% ABSTRACT (end of the roman-numbered part)
+% ABSTRACT – CUỐI PHẦN LA MÃ
 \cleardoublepage
 \newgeometry{left=3.5cm,right=2cm,top=3cm,bottom=3cm}
 \pagestyle{plain}
 \setlength{\parindent}{1.25cm}
 \justifying
+
 \input{Abstract}
+
 \restoregeometry
 
-% ARABIC PAGE NUMBERS START HERE
+
+% BẮT ĐẦU ĐÁNH SỐ TRANG ARABIC TỪ ĐÂY
 \cleardoublepage
 \pagenumbering{arabic}
 \setcounter{page}{1}
 \pagestyle{plain}
 
-\SpecialPageNoClear{INTRODUCTION}{Introduction}
+% MỞ ĐẦU + CÁC CHƯƠNG
+\SpecialPageNoClear{MỞ ĐẦU}{MoDau}
 
 \FixedChapter{Chapter1}
 \FixedChapter{Chapter2}
 \FixedChapter{Chapter3}
 \FixedChapter{Chapter4}
-\FixedChapter{Conclusion}
+\FixedChapter{KetLuanvaHuongPT}
 
-% REFERENCES
-\newgeometry{left=3cm,right=2cm,top=2cm,bottom=2.5cm}
-\phantomsection\addcontentsline{toc}{section}{\numberline{} REFERENCES}
+% ---------- PHỤ LỤC (danh mục tham khảo) ----------
+\newgeometry{left=3cm,right=2cm,top=2cm,bottom=2.5cm,oneside}
+
+\phantomsection\addcontentsline{toc}{section}{\numberline{} PHỤ LỤC}
 \bibliographystyle{IEEEtran}
-\bibliography{references}
-\restoregeometry
+\bibliography{TaiLieuThamKhao}
 
-\FixedChapter{Appendix}
+\restoregeometry            % nếu còn nội dung sau phụ lục
+% ---------------------------------------------------
 
 \end{document}
+
+
+\textbf{Em đã tham gia nghiên cứu và có một bài báo được xuất bản:}
+
+Tiêu đề bài báo: \textit{FedNTProto: A Prototype-Based Approach for Personalized Federated Learning}
+
+Tác giả: TrungKien-Tran,\textbf{ Phuong-Tran}, ThiLan-Le, ThanhHai-Tran  
+
+Xuất bản tại hội nghị: 7th International Conference on Multimedia Analysis and Pattern Recognition (MAPR 2024)
+
+ (accepted)

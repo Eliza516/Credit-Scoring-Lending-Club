@@ -1,0 +1,46 @@
+\subsection*{Đặt vấn đề}
+\addcontentsline{toc}{subsection}{Đặt vấn đề}
+
+Trong thời đại số phát triển mạnh mẽ, số lượng dữ liệu giao dịch tài chính được tạo ra ngày càng tăng nhờ sự phổ biến của Internet tốc độ cao, thiết bị di động và các nền tảng thanh toán trực tuyến. Việc tận dụng các dữ liệu này cho các mục tiêu phân tích, dự báo và ra quyết định đã trở thành một nhu cầu cấp thiết, đặc biệt trong lĩnh vực ngân hàng và tài chính. Tuy nhiên, dữ liệu giao dịch thẻ tín dụng thường ẩn chứa những rủi ro về quyền riêng tư và bảo mật cá nhân, khi mà các thông tin nhạy cảm của người dùng, như thông tin thẻ, địa chỉ, và hành vi mua sắm, có thể bị khai thác trái phép trong quá trình thu thập và xử lý tập trung trên các máy chủ. Khi khối lượng và tốc độ dữ liệu ngày càng tăng, các vấn đề liên quan đến quyền riêng tư, bảo mật và tính công bằng trong khai thác dữ liệu cũng trở nên phức tạp và cấp bách hơn.
+
+Trong bối cảnh đó, việc phát triển các phương pháp phát hiện gian lận thẻ tín dụng vừa đảm bảo hiệu quả, vừa bảo vệ quyền riêng tư dữ liệu người dùng là một thách thức lớn. Đặc biệt, dữ liệu giao dịch có tính chất tuần tự, phi cấu trúc và mất cân bằng nghiêm trọng giữa số lượng giao dịch hợp lệ và gian lận, làm giảm độ nhạy của các mô hình học máy truyền thống. Đồng thời, các hành vi gian lận thường không diễn ra đơn lẻ mà liên quan đến các mối quan hệ phức tạp giữa người dùng, địa điểm, thời gian và thiết bị. Do đó, cần có những phương pháp mới có khả năng khai thác được các đặc trưng không gian - thời gian này, đồng thời xử lý hiệu quả bài toán mất cân bằng lớp.
+
+Trong đồ án này, em sẽ tập trung nghiên cứu một phương pháp phát hiện gian lận thẻ tín dụng hiện đại, tích hợp giữa cơ chế mặt nạ đặc trưng (channel-wise mask) nhằm làm nổi bật các thuộc tính quan trọng trong không gian đặc trưng và mạng hồi tiếp RNN để mô hình hóa các chuỗi hành vi theo thời gian. Ngoài ra, mô hình cũng kết hợp mở rộng giao dịch (transactional expansion) để bổ sung ngữ cảnh giao dịch, và áp dụng hàm mất mát Focal Loss để giải quyết vấn đề mất cân bằng lớp. Mục tiêu là xây dựng một giải pháp hiệu quả, có khả năng ứng dụng thực tiễn trong các hệ thống giám sát gian lận tài chính quy mô lớn.
+
+\subsection*{Mục tiêu và đóng góp của đồ án}
+\addcontentsline{toc}{subsection}{Mục tiêu và đóng góp của đồ án}
+Mặc dù các mô hình phát hiện gian lận hiện tại đã đạt được những kết quả nhất định, nhưng thách thức lớn vẫn nằm ở việc xử lý đồng thời nhiều đặc thù phức tạp của dữ liệu giao dịch thẻ tín dụng: dữ liệu tuần tự, mối quan hệ phức tạp giữa các thực thể (người dùng, địa điểm, thiết bị), và mất cân bằng lớp nghiêm trọng. Vấn đề mất cân bằng lớp xuất hiện khi các giao dịch gian lận chiếm tỷ lệ rất nhỏ so với tổng số giao dịch, dẫn đến các mô hình học máy dễ bị thiên lệch về lớp chiếm ưu thế. Đồng thời, việc khai thác các đặc trưng quan hệ phức tạp trong dữ liệu phi cấu trúc đòi hỏi các kiến trúc mô hình phải đủ tinh gọn để đảm bảo khả năng triển khai thực tế trên các hệ thống giám sát thời gian thực.
+
+Do đó, mục tiêu của đồ án là nghiên cứu và phát triển một mô hình phát hiện gian lận thẻ tín dụng hiệu quả, có khả năng xử lý đồng thời dữ liệu phi cấu trúc, dữ liệu tuần tự và mất cân bằng lớp. Cụ thể, đồ án đề xuất một kiến trúc tích hợp cơ chế mặt nạ đặc trưng để học các thuộc tính quan trọng trong không gian đặc trưng, mạng hồi tiếp RNN để nhận diện quy luật hành vi theo thời gian, kỹ thuật mở rộng giao dịch (transactional expansion) để tăng ngữ cảnh và Focal Loss để cải thiện khả năng phát hiện các mẫu gian lận hiếm. Các kết quả thực nghiệm trên tập dữ liệu thực tế 1.85 triệu giao dịch cho thấy tiềm năng ứng dụng mạnh mẽ của mô hình trong thực tiễn.
+
+Những đóng góp chính của đồ án bao gồm:
+
+\begin{itemize}
+    \item Đề xuất kiến trúc tích hợp giữa cơ chế mặt nạ đặc trưng và RNN nhằm khai thác hiệu quả đặc trưng không gian - thời gian trong dữ liệu giao dịch.
+    \item Kết hợp kỹ thuật mở rộng giao dịch để bổ sung ngữ cảnh hành vi và áp dụng Focal Loss để xử lý mất cân bằng lớp.
+    \item Triển khai thực nghiệm trên tập dữ liệu thực tế, phân tích hiệu quả mô hình và so sánh với các phương pháp hiện tại.
+    \item Cung cấp giải pháp khả thi cho ứng dụng trong các hệ thống giám sát gian lận tài chính quy mô lớn.
+\end{itemize}
+
+\subsection*{Bố cục của đồ án}
+\addcontentsline{toc}{subsection}{Bố cục của đồ án}
+
+Nội dung của đồ án gồm có 4 chương chính như sau:
+
+\textit{\textbf{Chương 1: Mở đầu}}
+Chương này phác hoạ bức tranh toàn cảnh về vấn nạn gian lận thẻ tín dụng trong bối cảnh chuyển đổi số ngành tài chính, chỉ ra mức độ thiệt hại kinh tế, mức độ phức tạp ngày càng tăng của hành vi gian lận và những hạn chế cố hữu của các hệ thống phòng chống truyền thống; đồng thời xác định rõ khoảng trống nghiên cứu mà MaRENet hướng tới lấp đầy. Mục tiêu nghiên cứu được lượng hoá thành hai trục chính: nâng cao độ chính xác phát hiện gian lận đối với lớp dữ liệu hiếm và đảm bảo độ trễ suy luận thấp cho ứng dụng thời gian thực. Chương cũng tóm tắt đóng góp khoa học của đồ án, bao gồm đề xuất kiến trúc MaRENet với cơ chế Feature Mask, quy trình mở rộng giao dịch và chiến lược huấn luyện kết hợp BCE–Focal Loss dưới bất định học, qua đó đặt nền móng cho các chương tiếp theo.
+
+\textit{\textbf{Chương 2: Cơ sở lý thuyết và các phương pháp liên quan}}
+Đặt nền tảng lý thuyết cho toàn bộ đồ án bằng cách mô tả bài toán phát hiện gian lận thẻ tín dụng như một bài toán phân loại nhị phân cực mất cân bằng, có tính chuỗi và yêu cầu thời gian thực. Chương lần lượt tổng quan bốn hướng tiếp cận: (i) các mô hình học máy truyền thống (KNN, LR, DT, RF, XGBoost, LightGBM, CatBoost), (ii) các kỹ thuật tổ hợp (Stacking, Voting), (iii) mạng học sâu tuần tự (GRU, LSTM) và (iv) các kiến trúc chuyên biệt cho giao dịch như STAN và TH-LSTM. Tiếp đó, chương trình bày chi tiết cơ chế của GRU/LSTM và giới thiệu hai hàm mất mát chủ đạo—Binary Cross-Entropy (ổn định) và Focal Loss (tập trung mẫu hiếm)—nhằm giải quyết dữ liệu lệch lớp. Những tri thức này làm cơ sở lý luận vững chắc cho thiết kế mô hình MaRENet ở Chương 3.
+
+\textit{\textbf{Chương 3: Phương pháp nghiên cứu}}
+Trình bày kiến trúc và phương pháp huấn luyện mô hình MaRENet cho bài toán phát hiện gian lận. Mô hình gồm ba khối chính: mở rộng chuỗi giao dịch để thêm ngữ cảnh hành vi, lớp mặt nạ đặc trưng nhằm học trọng số cho từng chiều đầu vào, và mạng hồi tiếp GRU/LSTM để học quan hệ chuỗi. Quy trình tiền xử lý bao gồm mã hóa đặc trưng, chuẩn hóa dữ liệu và chia tập huấn luyện theo người dùng để đảm bảo đánh giá khách quan. Đặc biệt, mô hình sử dụng chiến lược kết hợp Binary Cross-Entropy và Focal Loss dưới cơ chế Uncertainty Weighting để xử lý dữ liệu lệch lớp hiệu quả và tăng cường khả năng phát hiện gian lận hiếm.
+
+\textit{\textbf{Chương 4: Thực nghiệm và đánh giá}}
+Chương cuối trình bày thiết kế thí nghiệm trên hai tập dữ liệu giả lập (tổng hợp) từ Kaggle với hơn 1.85 triệu giao dịch, đặc tả thước đo Precision, Recall, F1, ROC-AUC cũng như độ trễ suy luận; so sánh toàn diện MaRENet với các baseline cổ điển và SOTA nêu ở Chương 2; thực hiện phân tích loại bỏ từng thành phần để định lượng đóng góp từng module (Mask, Focal Loss, Day–Hour scaling, GRU/LSTM) và khảo sát độ nhạy siêu tham số; đánh giá chi phí tính toán thông qua FLOPs và số tham số để chứng minh khả năng chạy thời gian thực; cuối cùng thảo luận sâu sắc các kết quả, nêu bật ưu điểm, hạn chế, tiềm năng mở rộng sang phát hiện rửa tiền, giao dịch chứng khoán bất thường và khuyến nghị hướng nghiên cứu trong tương lai.
+
+
+
+
+
+

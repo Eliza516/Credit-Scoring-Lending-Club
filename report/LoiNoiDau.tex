@@ -1,0 +1,16 @@
+% \pagenumbering{gobble}
+% \section*{LỜI NÓI ĐẦU}
+% \thispagestyle{empty}
+
+Trong bối cảnh kinh tế số phát triển mạnh mẽ, các dịch vụ tài chính điện tử và thanh toán trực tuyến ngày càng trở nên phổ biến, mang lại sự tiện lợi vượt trội cho người dùng. Tuy nhiên, song song với những lợi ích đó, rủi ro gian lận tài chính, đặc biệt là gian lận thẻ tín dụng, cũng gia tăng một cách đáng báo động, gây tổn thất nghiêm trọng cho các tổ chức và cá nhân. Thực tế này đặt ra yêu cầu cấp thiết đối với việc nghiên cứu và phát triển các phương pháp phát hiện gian lận thông minh, hiệu quả, có khả năng thích ứng với các đặc điểm phức tạp và không đồng nhất của dữ liệu thực tế.
+
+Trong những năm gần đây, các mô hình học sâu (Deep Learning) đã chứng minh được tiềm năng to lớn trong việc phát hiện và phân loại các mẫu dữ liệu bất thường, nhờ khả năng trích xuất đặc trưng tự động và học biểu diễn phức tạp. Tuy nhiên, các bài toán thực tế như phát hiện gian lận thẻ tín dụng thường gặp phải nhiều thách thức, bao gồm sự mất cân bằng dữ liệu nghiêm trọng, tính chất ẩn giấu phức tạp của các giao dịch gian lận, và yêu cầu xử lý thời gian thực với chi phí tính toán thấp. Những hạn chế này khiến các mô hình truyền thống khó đạt được hiệu quả tối ưu khi áp dụng trong môi trường sản xuất thực tế.
+
+Nhận thức được những vấn đề trên, đồ án này tập trung nghiên cứu và phát triển một mô hình phát hiện gian lận thẻ tín dụng mới có tên là Mạng tích hợp đặc trưng và chuỗi thời gian. Mô hình đề xuất tận dụng khả năng học biểu diễn thông qua cơ chế mặt nạ đặc trưng (mask channel-wise) để nhấn mạnh những đặc trưng quan trọng, đồng thời sử dụng mạng nơ-ron hồi tiếp (Recurrent Neural Network - RNN) để mô hình hóa các phụ thuộc thời gian giữa các giao dịch. Đặc biệt, đồ án sử dụng kỹ thuật mở rộng giao dịch (Transactional Expansion) để cung cấp thêm ngữ cảnh giao dịch và áp dụng hàm mất mát Focal Loss nhằm giải quyết vấn đề mất cân bằng dữ liệu nghiêm trọng. Mô hình được thiết kế hướng tới mục tiêu cân bằng giữa độ chính xác cao và chi phí tính toán thấp, phù hợp triển khai trong các hệ thống phát hiện gian lận thời gian thực.
+
+Thông qua việc triển khai và thực nghiệm trên tập dữ liệu thực tế, đồ án không chỉ hướng đến việc xác minh hiệu quả của mô hình, mà còn mong muốn đóng góp một giải pháp khả thi cho bài toán phát hiện gian lận thẻ tín dụng – một trong những vấn đề cấp thiết trong lĩnh vực an toàn tài chính hiện nay.
+
+Cuối cùng, em xin gửi lời cảm ơn chân thành tới \textbf{TS Vương Hoàng Nam} – người đã tận tình hướng dẫn và hỗ trợ em trong suốt quá trình thực hiện đồ án này. Em cũng xin cảm ơn các thầy cô trong Trường Điện - Điện Tử, cùng các anh chị trong phòng nghiên cứu AI đã giúp đỡ và tạo điều kiện thuận lợi để em hoàn thành đồ án tốt nghiệp. Trong quá trình thực hiện, do hạn chế về thời gian và kiến thức, bài viết không tránh khỏi những thiếu sót, em rất mong nhận được những góp ý quý báu từ các thầy cô và các bạn để hoàn thiện đồ án được tốt hơn. Em xin chân thành cảm ơn!
+
+
+% \cleardoublepage

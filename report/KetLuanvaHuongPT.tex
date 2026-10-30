@@ -1,0 +1,37 @@
+%
+\newpage
+\section*{KẾT LUẬN}
+\phantomsection\addcontentsline{toc}{section}{\numberline {}KẾT LUẬN}
+\subsection*{Kết luận chung}
+
+\phantomsection\addcontentsline{toc}{section}{\numberline {}Kết luận chung}
+Trong quá trình thực hiện đồ án tốt nghiệp, em đã nghiên cứu và triển khai thành công mô hình MaRENet dành cho bài toán phát hiện gian lận thẻ tín dụng dựa trên dữ liệu giao dịch thời gian thực. MaRENet là một kiến trúc học sâu tích hợp các kỹ thuật tiên tiến như Transactional Expansion, cơ chế channel-wise masking để chọn lọc đặc trưng quan trọng, mạng nơ-ron hồi quy GRU/LSTM để mô hình hóa chuỗi thời gian, cùng với hàm mất mát Focal Loss nhằm xử lý hiệu quả vấn đề mất cân bằng dữ liệu nghiêm trọng.
+
+Các thử nghiệm được tiến hành toàn diện trên hai bộ dữ liệu lớn với sự chênh lệch đáng kể về phân phối, bao gồm Main dataset và External dataset. Kết quả thực nghiệm chứng minh rằng MaRENet vượt trội hơn nhiều phương pháp truyền thống phổ biến như XGBoost ~\cite{chen2016xgboost}, Random Forest ~\cite{breiman2001random}, CatBoost ~\cite{prokhorenkova2018catboost} và các phương pháp học sâu tiên tiến như TH-LSTM ~\cite{Xie2022}, STAN ~\cite{cheng2020spatio} về cả hai tiêu chí quan trọng là Recall và F1-score. Đặc biệt, MaRENet-GRU đạt F1-score cao nhất là 0,9694 trên tập Main dataset, trong khi MaRENet-LSTM đạt mức F1-score lên tới 0,9770 trên tập External dataset, khẳng định tính ổn định và khả năng tổng quát hóa vượt trội của kiến trúc đề xuất.
+
+Bên cạnh đó, các phân tích ablation trong chương 4 cũng làm rõ vai trò thiết yếu của từng thành phần cấu tạo nên mô hình MaRENet. Việc loại bỏ từng thành phần như channel-wise masking, Focal Loss hay chuẩn hóa theo ngày/giờ đều khiến hiệu suất mô hình suy giảm đáng kể, khẳng định sự cần thiết của mỗi yếu tố trong việc tối ưu hiệu suất phát hiện gian lận. Ngoài ra, MaRENet còn đạt được hiệu quả cao trong môi trường vận hành thời gian thực với độ trễ thấp (dưới 1 ms mỗi giao dịch), phù hợp triển khai vào các hệ thống thanh toán lớn có yêu cầu nghiêm ngặt về thời gian đáp ứng.
+
+Kết quả thực nghiệm toàn diện này khẳng định MaRENet không chỉ có hiệu suất vượt trội mà còn có tiềm năng ứng dụng cao trong các hệ thống giám sát gian lận thẻ tín dụng quy mô lớn, đáp ứng đầy đủ các tiêu chí về độ chính xác, ổn định và khả năng triển khai thực tế.
+
+\subsection*{Hướng phát triển}
+% \phantomsection\addcontentsline{toc}{section}{\numberline {}Hướng phát triển}
+
+Mặc dù đồ án tốt nghiệp đã đạt được một số kết quả khả quan, vẫn còn tồn tại một số hạn chế cần khắc phục:
+\newpage
+\begin{itemize}
+    \item  Mô hình MaRENet hiện tại chưa tích hợp khả năng học trực tuyến (online learning) để thích ứng nhanh với các biến thể gian lận mới xuất hiện trong thực tế.
+    \item Độ bảo mật và quyền riêng tư của dữ liệu vẫn chưa được phân tích sâu rộng, đặc biệt trong ngữ cảnh các hệ thống tài chính nhạy cảm và yêu cầu tuân thủ cao.
+\end{itemize}
+
+Dựa trên những hạn chế trên, em xin đề xuất một số hướng phát triển và nghiên cứu trong tương lai như sau:
+\begin{itemize}
+    \item Nghiên cứu tích hợp các thuật toán học trực tuyến vào MaRENet nhằm nâng cao khả năng thích ứng theo thời gian thực với các chiến thuật gian lận mới.
+    \item Khai thác sâu hơn các kỹ thuật Explainable AI như SHAP, LIME hay các phương pháp attention nâng cao để cung cấp giải thích minh bạch và chi tiết hơn về quyết định dự đoán của mô hình.
+    \item Triển khai và đánh giá mô hình MaRENet trên các nền tảng có tài nguyên hạn chế như FPGA, Edge TPU hoặc các môi trường container hóa (Docker, Kubernetes), từ đó tối ưu hóa khả năng mở rộng và giảm thiểu độ trễ.
+    \item Nghiên cứu và ứng dụng các kỹ thuật bảo mật tiên tiến như mã hóa đồng hình (homomorphic encryption) và quyền riêng tư vi phân (differential privacy) nhằm đảm bảo an toàn dữ liệu khách hàng, đồng thời bảo vệ mô hình trước các nguy cơ tấn công từ bên ngoài.
+    \item Mở rộng thử nghiệm và đánh giá mô hình trên nhiều bộ dữ liệu thuộc các miền khác nhau như thương mại điện tử, ví điện tử và giao dịch ngân hàng điện tử để đánh giá khả năng tổng quát hóa và độ bền vững của mô hình trong các môi trường thực tế đa dạng.
+    \item Ứng dụng MaRENet trong phát hiện rửa tiền (Anti-Money Laundering), kết hợp phân tích chuỗi giao dịch và mô hình đồ thị nhằm nhận diện luồng chuyển tiền bất thường, hỗ trợ giám sát tuân thủ các khuyến nghị của Lực lượng Đặc nhiệm Tài chính quốc tế (FATF).
+
+\end{itemize}
+
+
