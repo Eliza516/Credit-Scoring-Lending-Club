@@ -1,8 +1,4 @@
-# Dự đoán vỡ nợ Lending Club (nhánh `simple`)
-
-Dự đoán một khoản vay có bị **xóa nợ (Charged Off)** hay không, chỉ từ thông tin biết được lúc xét duyệt.
-Project môn *Học thống kê* (DS66A / DS66B). Nhánh `simple` là bản làm lại **đơn giản, theo từng bước**:
-mỗi hàm và mỗi kết quả nằm ở một ô code riêng, và mọi con số/nhận xét đều do code in ra từ dữ liệu thật.
+# Dự đoán vỡ nợ Lending Club 
 
 ## Dữ liệu
 
